@@ -16,12 +16,12 @@
 |APP_DIR|crawler-php|
 
 ```
-export ENV=develop
+export ENV=local
 export APP_NAME=app_name
 export SLACK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
 export TWITTER_BEARER_TOKEN=YOUR_TWITTER_TOKEN
 export GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account-key-file
-export APP_DIR=your_application_dir
+export APP_DIR=crawler-php
 
 docker build -t ${APP_NAME} -f Dockerfile . --build-arg DEPLOY_ENV=${ENV} --build-arg APP_DIR=${APP_DIR}
 ```
@@ -30,26 +30,41 @@ docker build -t ${APP_NAME} -f Dockerfile . --build-arg DEPLOY_ENV=${ENV} --buil
 
 ```
 docker container run \
-  -p 80:80 \
+  -p 8080:80 \
   -e DEPLOY_ENV=${ENV} \
   -e SLACK_URL=${SLACK_URL} \
   -e TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN} \
   -e GOOGLE_APPLICATION_CREDENTIALS=/var/key/key.json \
-  -v $PWD/${GOOGLE_APPLICATION_CREDENTIALS}:/var/key/key.json \
-  ${APP_name}
+  -v ${GOOGLE_APPLICATION_CREDENTIALS}:/var/key/key.json \
+  ${APP_NAME}
 
-# if volumes mount copy to .env from {ENV}.env
+# if volumes mount copy to .env from {ENV}.env and composer install
 docker container run \
-  -p 80:80 \
+  -p 8080:80 \
   -e DEPLOY_ENV=${ENV} \
   -e SLACK_URL=${SLACK_URL} \
   -e TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN} \
   -e GOOGLE_APPLICATION_CREDENTIALS=/var/key/key.json \
-  -v $PWD/${APP_DIR}:/var/www/html/ \
-  -v $PWD/${GOOGLE_APPLICATION_CREDENTIALS}:/var/key/key.json \
+  -v $PWD/${APP_DIR}:/var/www/html/${APP_DIR} \
+  -v ${GOOGLE_APPLICATION_CREDENTIALS}:/var/key/key.json \
   -v $PWD/000-default.conf:/etc/apache2/sites-available/000-default.conf \
   -v $PWD/apache2.conf:/etc/apache2/apache2.conf \
-  ${APP_name}
+  ${APP_NAME}
+
+# if atache container
+docker container run \
+  -it \
+  -p 8080:80 \
+  -e DEPLOY_ENV=${ENV} \
+  -e SLACK_URL=${SLACK_URL} \
+  -e TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN} \
+  -e FB_USER_ID=${FB_USER_ID} \
+  -e FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN} \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/var/key/key.json \
+  -v ${GOOGLE_APPLICATION_CREDENTIALS}:/var/key/key.json \
+  -v $PWD/${APP_DIR}:/var/www/html/${APP_DIR} \
+  ${APP_NAME} \
+  /bin/bash
 ```
 
 ### push google cloud repository

@@ -2,11 +2,15 @@
 
 namespace App\Application\Interactors\Reddit;
 
+use App\Adapters\BigQueryResponseAdapter;
 use App\Adapters\RedditApiAdapter;
 use App\Adapters\SqlModelAdapter;
+use App\Adapters\TargetDateAdapter;
 use App\Application\Repositories\RedditApiRepository;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Reddit\RedditApiUseCase;
+use App\Entities\BigQuery\Colmun;
+use App\Entities\BigQuery\LatestData;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
@@ -19,7 +23,7 @@ use Illuminate\Support\Facades\Log;
  */
 final class RedditApiManager implements RedditApiUseCase
 {
-    const LIMIT_COUNT = 500;
+    const LIMIT_COUNT = 1000;
 
     private RedditApiRepository $repository;
     private BigQueryUseCase $bigQueryUseCase;
@@ -36,9 +40,9 @@ final class RedditApiManager implements RedditApiUseCase
      * getLatestDate
      *
      * @param  mixed $title
-     * @return string|null
+     * @return LatestData|null
      */
-    public function getLatestData(string $title, string $language): ?string
+    public function getLatestData(string $title, string $language): ?LatestData
     {
         if ($this->bigQueryUseCase->existsTable($title, $language) === false) {
             return null;
@@ -67,10 +71,10 @@ final class RedditApiManager implements RedditApiUseCase
             return null;
         }
 
-        return $response->getDataList()->first()['created_at'] ?? null;
+        return BigQueryResponseAdapter::getLatestData($tableId, $response->getDataList());
     }
 
-    public function getThreadList(string $id, $createdAt = null): ?Collection
+    public function getThreadList(string $id, ?Colmun $createdAt = null): ?Collection
     {
         Log::debug('RedditApiManager:getThreadList');
         $requestModel = RedditApiAdapter::getSubRedditRequestData();
@@ -85,7 +89,7 @@ final class RedditApiManager implements RedditApiUseCase
         return $threadList;
     }
 
-    public function getCommentList(Collection $threadList, $createdAt = null): ?Collection
+    public function getCommentList(Collection $threadList, ?Colmun $createdAt = null): ?Collection
     {
         $commentList = collect([]);
         Log::debug('RedditApiManager:getCommentList');
@@ -103,7 +107,13 @@ final class RedditApiManager implements RedditApiUseCase
             }
         }
 
-        return $this->slice($commentList, $createdAt);
+        $commentList = $this->slice(
+            $commentList->unique('id')->values(),
+            $createdAt
+        );
+        info('slice -  count:', [$commentList->count()]);
+
+        return $commentList;
     }
 
     /**
@@ -115,7 +125,7 @@ final class RedditApiManager implements RedditApiUseCase
      * @param  mixed $createdAt
      * @return Collection
      */
-    public function slice(Collection $commentList, $createdAt = null): Collection
+    public function slice(Collection $commentList, ?Colmun $createdAt = null): Collection
     {
         Log::debug('RedditApiManager:slice');
         if (is_null($createdAt) === true) {
@@ -134,8 +144,9 @@ final class RedditApiManager implements RedditApiUseCase
             })->values();
         }
 
-        $bqLatestDate = new Carbon($createdAt);
-        return $commentList->filter(function ($value) use ($bqLatestDate) {
+        $bqLatestDate = TargetDateAdapter::getTargetDate($createdAt->getValue());
+
+        return $commentList->filter(function ($value) use ($bqLatestDate, $createdAt) {
             if (array_key_exists('text', $value) === false) {
                 Log::debug('undefined index [text]', [$value]);
                 return false;
@@ -146,11 +157,35 @@ final class RedditApiManager implements RedditApiUseCase
                 return false;
             }
 
-            $targetDate = new Carbon($value['created_at']);
-            Log::debug('get data(created_at) : bq data(created_at):', ["$targetDate : $bqLatestDate"]);
+            $targetDate = TargetDateAdapter::getTargetDate($value[$createdAt->getName()]);
+
+            if ($targetDate->getCarbon()->gt($bqLatestDate->getCarbon()) === true) {
+                Log::info(
+                    '[前回取得したデータよりも新しい] reddit data(created) : bq data(created):',
+                    [$value[$createdAt->getName()] . " : " . $createdAt->getValue()]
+                );
+            }
+
+            // 時間で比較した場合と整数値で比較した場合の結果が異なる場合
+            $int_result = (int) $value[$createdAt->getName()] > $createdAt->getValue();
+            $time_result =  $targetDate->getCarbon()->gt($bqLatestDate->getCarbon());
+
+            if ($int_result !== $time_result) {
+                Log::info(
+                    '時間で比較した場合と整数値で比較した場合の結果が異なる',
+                    [
+                        '実際の値' => [
+                            'redditから取得した値' => $value[$createdAt->getName()],
+                            'big queryのlatest data' => $createdAt->getValue(),
+                        ],
+                        '数値で比較した場合' => $int_result,
+                        '時間で比較した場合' => $time_result,
+                    ]
+                );
+            }
 
             // get data > bq latest data
-            return $targetDate->gt($bqLatestDate);
+            return $targetDate->getCarbon()->gt($bqLatestDate->getCarbon());
         })->values();
     }
 }

@@ -4,8 +4,7 @@ namespace Unit\Adapters;
 
 use App\Adapters\NotificationAdapter;
 use App\Application\InputData\NotificationSendModel;
-use App\Application\OutputData\InnerApiResponse\BigQueryResponse;
-use App\Application\OutputData\InnerApiResponse\NotificationResponseModel;
+use App\Entities\Notification\NotificationResponseModel;
 use App\Entities\RiskWord\RiskCommentList;
 use Tests\TestCase;
 use \Mockery;
@@ -61,11 +60,11 @@ class NotificationAdapterTest extends TestCase
      */
     public function getNotificationResponseModel(): void
     {
-        $apiResponse = Mockery::mock(BigQueryResponse::class);
-        $apiResponse->shouldReceive('getStatusCode')->andReturn(200)->once();
-        $apiResponse->shouldReceive('getBodyAsArray')->andReturn([])->once();
+        // $apiResponse = Mockery::mock(BigQueryResponse::class);
+        // $apiResponse->shouldReceive('getStatusCode')->andReturn(200)->once();
+        // $apiResponse->shouldReceive('getBodyAsArray')->andReturn([])->once();
 
-        $actual = NotificationAdapter::getNotificationResponseModel($apiResponse);
+        $actual = NotificationAdapter::getNotificationResponseModel([]);
 
         $this->assertInstanceOf(NotificationResponseModel::class, $actual);
     }

@@ -6,6 +6,7 @@ use App\Adapters\RiskWordAdapter;
 use App\Adapters\SqlModelAdapter;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\RiskWord\RiskWordUseCase;
+use App\Entities\BigQuery\Colmun;
 use App\Entities\ResponseData\Bigquery\BigQueryData;
 use App\Entities\RiskWord\RiskCommentList;
 use Illuminate\Support\Facades\Config;
@@ -55,7 +56,7 @@ final class RiskWordManager implements RiskWordUseCase
     public function getRiskComment(
         ?string $title = null,
         ?string $language = null,
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ): ?RiskCommentList {
         $crawlName = Config::get('crawl.name');
         $projectId = $this->bigQueryUseCase->getProjectId();
@@ -91,7 +92,7 @@ final class RiskWordManager implements RiskWordUseCase
         string $title,
         string $language,
         string $targetField = 'text',
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ): bool {
         $projectId    = $this->bigQueryUseCase->getProjectId();
         $datasetId    = $this->bigQueryUseCase->getDatasetId($crawlName);

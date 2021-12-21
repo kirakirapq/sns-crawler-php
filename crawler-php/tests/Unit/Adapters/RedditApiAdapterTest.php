@@ -58,12 +58,7 @@ class RedditApiAdapterTest extends TestCase
             ]
         ];
 
-        $apiResponse = Mockery::mock(BigQueryResponse::class);
-        $apiResponse->shouldReceive('getStatusCode')->andReturn(200)->once();
-        $apiResponse->shouldReceive('hasError')->andReturn(false)->once();
-        $apiResponse->shouldReceive('getBodyAsArray')->andReturn($data)->once();
-
-        $actual = RedditApiAdapter::getSubReddit($apiResponse);
+        $actual = RedditApiAdapter::getSubReddit($data);
 
         $this->assertInstanceOf(SubReddit::class, $actual);
     }
@@ -89,12 +84,7 @@ class RedditApiAdapterTest extends TestCase
             ]
         ];
 
-        $apiResponse = Mockery::mock(BigQueryResponse::class);
-        $apiResponse->shouldReceive('getStatusCode')->never();
-        $apiResponse->shouldReceive('hasError')->never();
-        $apiResponse->shouldReceive('getBodyAsArray')->andReturn($data)->once();
-
-        $actual = RedditApiAdapter::getThread($apiResponse, $subReddtRequestData);
+        $actual = RedditApiAdapter::getThread($data, $subReddtRequestData);
 
         $this->assertInstanceOf(Thread::class, $actual);
     }

@@ -2,11 +2,14 @@
 
 namespace App\Application\Interactors\Facebook;
 
+use App\Adapters\BigQueryResponseAdapter;
 use App\Adapters\FacebookApiAdapter;
 use App\Adapters\SqlModelAdapter;
 use App\Application\Repositories\FacebookApiRepository;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Facebook\FacebookApiUseCase;
+use App\Entities\BigQuery\Colmun;
+use App\Entities\BigQuery\LatestData;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
@@ -38,7 +41,7 @@ final class FacebookApiManager implements FacebookApiUseCase
      * @param  mixed $title
      * @return string|null
      */
-    public function getLatestData(string $title, string $language): ?string
+    public function getLatestData(string $title, string $language): ?LatestData
     {
         if ($this->bigQueryUseCase->existsTable($title, $language) === false) {
             return null;
@@ -67,10 +70,10 @@ final class FacebookApiManager implements FacebookApiUseCase
             return null;
         }
 
-        return $response->getDataList()->first()['created_at'] ?? null;
+        return BigQueryResponseAdapter::getLatestData($tableId, $response->getDataList());
     }
 
-    public function getFeedList(string $title, string $language, $createdAt = null): ?Collection
+    public function getFeedList(string $title, string $language, ?Colmun $colmun = null): ?Collection
     {
         Log::debug('FacebookApiManager:getFeedList');
         $type = FacebookApiAdapter::getRequestType('feed');
@@ -96,7 +99,7 @@ final class FacebookApiManager implements FacebookApiUseCase
         return $fbFeedDataList->getDataList();
     }
 
-    public function getCommentList(string $title, string $language, Collection $feedList, $createdAt = null): ?Collection
+    public function getCommentList(string $title, string $language, Collection $feedList, ?Colmun $colmun = null): ?Collection
     {
         Log::debug('FacebookApiManager:getCommentList');
         $type = FacebookApiAdapter::getRequestType('comment');
@@ -121,7 +124,7 @@ final class FacebookApiManager implements FacebookApiUseCase
             return null;
         }
 
-        return $this->slice($fbCommentkDataList->getDataList(), $createdAt);
+        return $this->slice($fbCommentkDataList->getDataList(), $colmun);
     }
 
     /**
@@ -130,20 +133,21 @@ final class FacebookApiManager implements FacebookApiUseCase
      * 古いデータ（=取得済み）があればTrue
      *
      * @param  Collection $commentList
-     * @param  mixed $createdAt
+     * @param  Colmun|null $colmun
      * @return Collection
      */
-    public function slice(Collection $commentList, $createdAt = null): Collection
+    public function slice(Collection $commentList, ?Colmun $colmun = null): Collection
     {
         Log::debug('FacebookApiManager:slice');
-        if (is_null($createdAt) === true) {
+        if (is_null($colmun) === true) {
             return $commentList;
         }
 
-        $bqLatestDate = new Carbon($createdAt);
-        return $commentList->filter(function ($value) use ($bqLatestDate) {
-            $targetDate = new Carbon($value['created_at']);
-            Log::debug('get data(created_at) : bq data(created_at):', ["$targetDate : $bqLatestDate"]);
+        $bqLatestDate = new Carbon($colmun->getValue());
+
+        return $commentList->filter(function ($value) use ($bqLatestDate, $colmun) {
+            $targetDate = new Carbon($value[$colmun->getName()]);
+            Log::debug('get facebook comment(created_at) : bq data(created_at):', ["$targetDate : $bqLatestDate"]);
 
             // get data > bq latest data
             return $targetDate->gt($bqLatestDate);

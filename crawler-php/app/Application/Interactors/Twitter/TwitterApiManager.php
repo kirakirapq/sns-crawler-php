@@ -2,10 +2,13 @@
 
 namespace App\Application\Interactors\Twitter;
 
+use App\Adapters\BigQueryResponseAdapter;
 use App\Adapters\SqlModelAdapter;
 use App\Application\Repositories\TwitterApiRepository;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Twitter\TwitterApiUseCase;
+use App\Entities\BigQuery\Colmun;
+use App\Entities\BigQuery\LatestData;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
@@ -35,9 +38,9 @@ final class TwitterApiManager implements TwitterApiUseCase
      * getLatestDate
      *
      * @param  mixed $title
-     * @return string|null
+     * @return LatestData|null
      */
-    public function getLatestData(string $title, string $language): ?string
+    public function getLatestData(string $title, string $language): ?LatestData
     {
         if ($this->bigQueryUseCase->existsTable($title, $language) === false) {
             return null;
@@ -66,10 +69,10 @@ final class TwitterApiManager implements TwitterApiUseCase
             return null;
         }
 
-        return $response->getDataList()->first()['created_at'] ?? null;
+        return BigQueryResponseAdapter::getLatestData($tableId, $response->getDataList());
     }
 
-    public function getTwitterMentionList(string $userId, $createdAt = null): ?Collection
+    public function getTwitterMentionList(string $userId, ?Colmun $createdAt = null): ?Collection
     {
         Log::debug('TwitterApiManager:getTwitterMentionList');
         $response = null;
@@ -115,7 +118,7 @@ final class TwitterApiManager implements TwitterApiUseCase
      * @param  mixed $createdAt
      * @return array
      */
-    public function slice(Collection $response, $createdAt = null): array
+    public function slice(Collection $response, ?Colmun $createdAt = null): array
     {
         Log::debug('TwitterApiManager:slice');
         if (is_null($createdAt) === true) {
@@ -124,10 +127,10 @@ final class TwitterApiManager implements TwitterApiUseCase
 
         $original = $response->count();
 
-        $bqLatestDate = new Carbon($createdAt);
-        $slice = $response->filter(function ($value) use ($bqLatestDate) {
-            $targetDate = new Carbon($value['created_at']);
-            Log::debug('get data(created_at) > bq data(created_at):', ["$targetDate > $bqLatestDate"]);
+        $bqLatestDate = new Carbon($createdAt->getValue());
+        $slice = $response->filter(function ($value) use ($bqLatestDate, $createdAt) {
+            $targetDate = new Carbon($value[$createdAt->getName()]);
+            Log::debug('get twitter data(created_at) > bq data(created_at):', ["$targetDate > $bqLatestDate"]);
 
             // get data > bq latest data
             return $targetDate->gt($bqLatestDate);

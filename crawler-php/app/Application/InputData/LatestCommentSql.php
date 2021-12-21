@@ -4,7 +4,7 @@ namespace App\Application\InputData;
 
 final class LatestCommentSql implements BigQuerySqlModel
 {
-    const SQL = 'SELECT created_at FROM `%s.%s.%s` order by created_at desc limit 1';
+    const SQL = 'SELECT * FROM `%s.%s.%s` order by created_at desc limit 1';
 
     private string $sql;
 

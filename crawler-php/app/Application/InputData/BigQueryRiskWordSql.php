@@ -3,6 +3,7 @@
 namespace App\Application\InputData;
 
 use App\Adapters\TargetDateAdapter;
+use App\Entities\BigQuery\Colmun;
 use Illuminate\Support\Collection;
 
 final class BigQueryRiskWordSql implements BigQuerySqlModel
@@ -42,7 +43,7 @@ final class BigQueryRiskWordSql implements BigQuerySqlModel
         string $appName,
         string $language,
         string $targetField,
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ) {
         $conditionalClause = '';
         if (0 < $riskwords->count()) {
@@ -59,7 +60,7 @@ final class BigQueryRiskWordSql implements BigQuerySqlModel
 
         $partitionClause = '';
         if (is_null($createdAt) === false) {
-            $targetDate = TargetDateAdapter::getTargetDate($createdAt);
+            $targetDate = TargetDateAdapter::getTargetDate($createdAt->getValue());
             $partitionClause = self::PARTITION_CLAUSE;
 
             $this->parameters[] = $targetDate->getTargetDate('Y-m-d');

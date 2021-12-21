@@ -28,7 +28,7 @@ class OuterErrorException extends Exception
      *
      * @return int
      */
-    protected function getStatusCode(?int $code = null): int
+    protected function getStatusCode(?string $code = null): int
     {
         $statusCode = null;
         switch (true) {
