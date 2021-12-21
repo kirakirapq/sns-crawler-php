@@ -1,0 +1,21 @@
+version: "3.7"
+services:
+  laravel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crawler-php
+    environment:
+      - DEPLOY_ENV=develop
+      - SLACK_URL=https://hooks.slack.com/services/xxxxx/yyyyyyyyy
+      - GOOGLE_APPLICATION_CREDENTIALS=/var/key/youer-service-account.json
+      - TWITTER_BEARER_TOKEN=xxxxxxxx
+      - FB_USER_ID=xxxx
+      - FB_PAGE_ACCESS_TOKEN=xxxx
+    ports:
+      - 80:80
+    volumes:
+      - ./crawler-php:/var/www/html/crawler-php
+      - ./path-to/youer-service-account.json:/var/key/youer-service-account.json
+      # - ./000-default.conf:/etc/apache2/sites-available/000-default.conf
+      # - ./apache2.conf:/etc/apache2/apache2.conf
