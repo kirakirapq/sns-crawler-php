@@ -5,8 +5,10 @@ namespace App\Adapters;
 use App\Application\InputData\Translation\TranslationRequestData;
 use App\Application\InputData\Translation\TranslationRequestDataWithGAS;
 use App\Entities\Translation\TranslationDataList;
+use App\Exceptions\ErrorDefinitions\ErrorDefinition;
+use App\Exceptions\ErrorDefinitions\LayerCode;
+use App\Exceptions\OuterErrorException;
 use Illuminate\Support\Collection;
-use Illuminate\Http\Request;
 
 /**
  * TwitterApiAdapter
@@ -31,14 +33,60 @@ final class TranslationDataAdapter
      * @param  mixed $httpResponse
      * @return void
      */
-    static public function getTranslationRequestData(Request $request, string $version = 'V3'): TranslationRequestData
+    static public function getTranslationRequestData(array $request, string $version = 'V3'): TranslationRequestData
     {
-        $requestArray = $request->all();
+        if (
+            isset($request['contents']) === false ||
+            empty($request['contents']) === true ||
+            is_array($request['contents']) === false
+        ) {
+            $ed = new ErrorDefinition(
+                LayerCode::CONTROLL_LAYER_CODE,
+                500
+            );
+
+            throw new OuterErrorException(
+                $ed,
+                'parameter error. [contents is array type and requied parameter.]'
+            );
+        }
+
+        if (
+            isset($request['language']['from']) === false ||
+            empty($request['language']['from']) === true ||
+            is_string($request['language']['from']) === false
+        ) {
+            $ed = new ErrorDefinition(
+                LayerCode::CONTROLL_LAYER_CODE,
+                500
+            );
+
+            throw new OuterErrorException(
+                $ed,
+                'parameter error. [language.from is string type and requied parameter.]'
+            );
+        }
+
+        if (
+            isset($request['language']['to']) === false ||
+            empty($request['language']['to']) === true ||
+            is_string($request['language']['to']) === false
+        ) {
+            $ed = new ErrorDefinition(
+                LayerCode::CONTROLL_LAYER_CODE,
+                500
+            );
+
+            throw new OuterErrorException(
+                $ed,
+                'parameter error. [language.to is string type and requied parameter.]'
+            );
+        }
 
         return new TranslationRequestData(
-            $requestArray['contents'],
-            $requestArray['language']['from'],
-            $requestArray['language']['to'],
+            $request['contents'],
+            $request['language']['from'],
+            $request['language']['to'],
             $version
         );
     }

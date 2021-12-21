@@ -13,13 +13,13 @@ use App\Application\UseCases\RiskWord\RiskWordUseCase;
 use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Twitter\TwitterApiUseCase;
 use App\Application\UseCases\Twitter\TwitterCrawlerUseCase;
+use App\Entities\BigQuery\Colmun;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;
 use App\Exceptions\OuterErrorException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
-use \DateTime;
 
 /**
  * TwitterCrawlerUseCaseの実装クラス
@@ -122,9 +122,15 @@ final class TwitterCrawlerManager implements TwitterCrawlerUseCase
      * @param  mixed $language
      * @return string|null
      */
-    private function invokeGetLatestData(string $title, string $language): ?string
+    private function invokeGetLatestData(string $title, string $language): ?Colmun
     {
-        return $this->twitterApiUseCase->getLatestData($title, $language);
+        $latestData = $this->twitterApiUseCase->getLatestData($title, $language);
+
+        if (is_null($latestData) === true) {
+            return null;
+        }
+
+        return $latestData->getColmun('created_at');
     }
 
 
@@ -133,7 +139,7 @@ final class TwitterCrawlerManager implements TwitterCrawlerUseCase
      *
      * @return void
      */
-    public function invokeGetTwitterMentionList(string $userId, $createdAt = null): ?Collection
+    public function invokeGetTwitterMentionList(string $userId, ?Colmun $createdAt = null): ?Collection
     {
         return $this->twitterApiUseCase->getTwitterMentionList($userId, $createdAt);
     }
@@ -206,7 +212,7 @@ final class TwitterCrawlerManager implements TwitterCrawlerUseCase
      *
      * @return void
      */
-    public function invokeRiskWordCheck(string $crawlName, string $title, string $language, string $createdAt = null)
+    public function invokeRiskWordCheck(string $crawlName, string $title, string $language, ?Colmun  $createdAt = null)
     {
         $targetField = 'text';
         $this->riskWordUseCase->loadRiskComment($crawlName, $title, $language, $targetField, $createdAt);
@@ -220,7 +226,7 @@ final class TwitterCrawlerManager implements TwitterCrawlerUseCase
      * @param  mixed $createdAt
      * @return RiskCommentList
      */
-    public function invokeGetRiskCommentList(string $title, string $language, string $createdAt = null): RiskCommentList
+    public function invokeGetRiskCommentList(string $title, string $language, ?Colmun $createdAt = null): RiskCommentList
     {
         return $this->riskWordUseCase->getRiskComment($title, $language, $createdAt);
     }

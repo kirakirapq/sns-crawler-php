@@ -9,10 +9,10 @@ final class TargetDateAdapter
     /**
      * getTargetDate
      *
-     * @param  string $target_date
+     * @param  string|int $target_date
      * @return TargetDate
      */
-    static public function getTargetDate(string $target_date): TargetDate
+    static public function getTargetDate(mixed $target_date): TargetDate
     {
         return new TargetDate($target_date);
     }

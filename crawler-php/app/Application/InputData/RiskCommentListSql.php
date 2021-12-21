@@ -3,6 +3,7 @@
 namespace App\Application\InputData;
 
 use App\Adapters\TargetDateAdapter;
+use App\Entities\BigQuery\Colmun;
 
 final class RiskCommentListSql implements BigQuerySqlModel
 {
@@ -12,7 +13,7 @@ final class RiskCommentListSql implements BigQuerySqlModel
         %4$s';
 
     const PARTITION_CLAUSE = 'date >= ?';
-    const CREATED_AT_CLAUSE = "FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S',created_at,'Asia/Tokyo') > ?";
+    const CREATED_AT_CLAUSE = 'FORMAT_TIMESTAMP("%%Y-%%m-%%d %%H:%%M:%%S", created_at,"Asia/Tokyo") > ?';
     const TITLE_CLAUSE = 'app_name = ?';
     const LANGUAGE_CLAUSE = 'language = ?';
 
@@ -25,11 +26,12 @@ final class RiskCommentListSql implements BigQuerySqlModel
         string $tableId,
         ?string $title = null,
         ?string $language = null,
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ) {
         $clause = '';
         if (is_null($createdAt) === false && empty($createdAt) === false) {
-            $targetDate = TargetDateAdapter::getTargetDate($createdAt);
+            $targetDate = TargetDateAdapter::getTargetDate($createdAt->getValue());
+            // $createdAColumnName = sprintf(self::CREATED_AT_CLAUSE, 'created_at');
 
             $clause .= sprintf(' %s %s', $this->getClause($clause), self::PARTITION_CLAUSE);
             $clause .= sprintf(' %s %s', $this->getClause($clause), self::CREATED_AT_CLAUSE);

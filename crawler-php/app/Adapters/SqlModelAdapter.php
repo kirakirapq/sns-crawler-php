@@ -7,6 +7,7 @@ use App\Application\InputData\BigQueryRiskWordSql;
 use App\Application\InputData\LatestCommentSql;
 use App\Application\InputData\RiskCommentListSql;
 use App\Application\InputData\RiskWordListSql;
+use App\Entities\BigQuery\Colmun;
 use Illuminate\Support\Collection;
 
 class SqlModelAdapter
@@ -33,7 +34,7 @@ class SqlModelAdapter
         string $appName,
         string $language,
         string $targetField = '',
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ): BigQuerySqlModel {
         return new BigQueryRiskWordSql(
             $projectId,
@@ -87,7 +88,7 @@ class SqlModelAdapter
      * @param  mixed $createdAt
      * @return BigQuerySqlModel
      */
-    static public function getRisCommentListSql(string $projectId, string $datasetId, string $tableId, ?string $title = null, ?string $language = null, ?string $createdAt = null): BigQuerySqlModel
+    static public function getRisCommentListSql(string $projectId, string $datasetId, string $tableId, ?string $title = null, ?string $language = null, ?Colmun $createdAt = null): BigQuerySqlModel
     {
         return new RiskCommentListSql($projectId, $datasetId, $tableId, $title, $language, $createdAt);
     }

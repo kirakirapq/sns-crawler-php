@@ -9,6 +9,7 @@ use App\Application\InputData\Translation\TranslationRequestDataWithGAS;
 use App\Application\Repositories\HttpRequest\HttpClient;
 use App\Application\InputData\RequestType;
 use App\Application\Repositories\Translation\TranslationRepository;
+use App\Entities\Translation\GoogleTlanslationResponseData;
 use App\Entities\Translation\TranslationData;
 use App\Entities\Translation\TranslationDataList;
 use App\Exceptions\ErrorDefinitions\ErrorDefinition;
@@ -26,6 +27,7 @@ final class TranslationClient implements TranslationRepository
     const V2_SEGMENT_LIMIT = 100;
     const V2_BYTE_LIMIT = 100000;
     const V3_CODEPOINT_LIMIT = 30000;
+    const THRESHOLD = 0.8;
 
     public function __construct(
         HttpClient $request
@@ -44,18 +46,37 @@ final class TranslationClient implements TranslationRepository
         TranslationRequestData $requestData
     ): TranslationData {
         $version = $requestData->getVersion();
+        $projectId = $requestData->getProjectId();
+        $location = $requestData->getLocation();
+        $contents = collect($requestData->getTextData());
+        $targetLanguageCode = $requestData->getTargetLanguageCode();
+        $optionalArgs = $requestData->getOption();
 
         if ($version == 'V2') {
             $translate = new TranslateClient([
-                'projectId' => $requestData->getProjectId(),
+                'projectId' => $projectId,
             ]);
 
             try {
-                // @return [ [source, input, text], ... ]
-                $response = $translate->translateBatch(
-                    $requestData->getTextData(),
-                    ['target' => $requestData->getTargetLanguageCode()]
-                );
+                $chunk = [];
+                foreach ($contents as $i => $value) {
+                    $chunk[] = $value;
+                    if ($this->isLimitOver($chunk, 'V2') === true) {
+                        $popData = array_pop($chunk);
+                        // @return [ [source, input, text], ... ]
+                        $result = $translate->translateBatch($chunk, ['target' => $targetLanguageCode]);
+                        $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($result);
+
+                        $chunk = [];
+                        $chunk[] = $popData;
+                    }
+
+                    if ($this->isLast($contents, $i) === true) {
+                        // @return [ [source, input, text], ... ]
+                        $result = $translate->translateBatch($chunk, ['target' => $targetLanguageCode]);
+                        $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($result);
+                    }
+                }
             } catch (Exception $e) {
                 Log::error('TranslationClient::translation', [$e->getMessage()]);
                 $ed = new ErrorDefinition(LayerCode::REPOSITORY_LAYER_CODE, $e->getCode());
@@ -63,25 +84,35 @@ final class TranslationClient implements TranslationRepository
                 throw new  OuterErrorException($ed, $e->getMessage());
             }
 
-            return GoogleTranslationAdapter::getTranlationDataFromV2($response);
+            return GoogleTranslationAdapter::getTranlationDataFromV2($googleTranslationResponseData);
         }
 
         if ($version == 'V3') {
-            $location = Config::get('app.GCP_TRANSLATION_LOCATION');
-
-            $projectId = $requestData->getProjectId();
-            $location = $requestData->getLocation();
-            $contents = $requestData->getTextData();
-            $targetLanguageCode = $requestData->getTargetLanguageCode();
-            $optionalArgs = $requestData->getOption();
-
-
             $translationServiceClient = new TranslationServiceClient();
             try {
                 $formattedParent = $translationServiceClient->locationName($projectId, $location);
+                $chunk = []; // 翻訳リクエストサイズ
+                foreach ($contents as $i => $value) {
+                    $chunk[] = $value;
+                    if ($this->isLimitOver($chunk, $version) === true) {
+                        $popData = array_pop($chunk);
 
-                // @return Google\Cloud\Translate\V3\TranslateTextResponse
-                $response = $translationServiceClient->translateText($contents, $targetLanguageCode, $formattedParent, $optionalArgs);
+                        // @return Google\Cloud\Translate\V3\TranslateTextResponse
+                        $response = $translationServiceClient->translateText($chunk, $targetLanguageCode, $formattedParent, $optionalArgs);
+
+                        $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($response);
+
+                        $chunk = [];
+                        $chunk[] = $popData;
+                    }
+
+                    if ($this->isLast($contents, $i) === true) {
+                        // @return Google\Cloud\Translate\V3\TranslateTextResponse
+                        $response = $translationServiceClient->translateText($chunk, $targetLanguageCode, $formattedParent, $optionalArgs);
+
+                        $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($response);
+                    }
+                }
             } catch (Exception $e) {
                 Log::error('TranslationClient::translation', [$e->getMessage()]);
                 $ed = new ErrorDefinition(LayerCode::REPOSITORY_LAYER_CODE, $e->getCode());
@@ -161,14 +192,17 @@ final class TranslationClient implements TranslationRepository
         string $version = 'V3'
     ): TranslationDataList {
         $projectId = Config::get('app.GCP_PROJECT_ID');
+        $translationResponse = [];
 
         if ($version == 'V2') {
-            return $this->executeTranslationWithV2($projectId, $apiCollection, $version);
+            $translationResponse = $this->executeTranslationWithV2($projectId, $apiCollection, $version);
         }
 
         if ($version == 'V3') {
-            return $this->executeTranslationWithV3($projectId, $apiCollection, $version);
+            $translationResponse = $this->executeTranslationWithV3($projectId, $apiCollection, $version);
         }
+
+        return GoogleTranslationAdapter::getTranlationDataListFromArray($apiCollection, $translationResponse);
     }
 
     /**
@@ -184,12 +218,13 @@ final class TranslationClient implements TranslationRepository
         string $projectId,
         Collection $apiCollection,
         string $version = 'V3'
-    ): TranslationDataList {
+    ): array {
+        Log::info('TranslationClient:executeTranslationWithV2', ['data count' => $apiCollection->count()]);
         $language = $apiCollection->first()['language'];
         $target = GoogleTranslationAdapter::getBCP47($language['target']);
         $translate = new TranslateClient(['projectId' => $projectId,]);
-        $chunk = [];
         try {
+            $chunk = []; // 翻訳リクエストサイズ
             foreach ($apiCollection as $i => $value) {
                 $translateionTargetFieldName = $value['translateionTargetFieldName'];
                 $chunk[] = $value[$translateionTargetFieldName];
@@ -197,7 +232,8 @@ final class TranslationClient implements TranslationRepository
                     $popData = array_pop($chunk);
                     // @return [ [source, input, text], ... ]
                     $result = $translate->translateBatch($chunk, ['target' => $target->getCode()]);
-                    $translated = GoogleTranslationAdapter::getTranlationDataListFromV2($apiCollection, $result);
+                    $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($result);
+                    // $translateResponseArray = array_merge($translateResponseArray, $result);
 
                     $chunk = [];
                     $chunk[] = $popData;
@@ -206,7 +242,8 @@ final class TranslationClient implements TranslationRepository
                 if ($this->isLast($apiCollection, $i) === true) {
                     // @return [ [source, input, text], ... ]
                     $result = $translate->translateBatch($chunk, ['target' => $target->getCode()]);
-                    $translated = GoogleTranslationAdapter::getTranlationDataListFromV2($apiCollection, $result);
+                    $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($result);
+                    // $translateResponseArray = array_merge($translateResponseArray, $result);
                 }
             }
         } catch (Exception $e) {
@@ -216,7 +253,7 @@ final class TranslationClient implements TranslationRepository
             throw new  OuterErrorException($ed, $e->getMessage());
         }
 
-        return $translated;
+        return $googleTranslationResponseData->getResponse();
     }
 
     /**
@@ -232,7 +269,8 @@ final class TranslationClient implements TranslationRepository
         string $projectId,
         Collection $apiCollection,
         string $version = 'V3'
-    ): TranslationDataList {
+    ): array {
+        Log::info('TranslationClient:executeTranslationWithV3', ['data count' => $apiCollection->count()]);
         $location = Config::get('app.GCP_TRANSLATION_LOCATION');
         $language = $apiCollection->first()['language'];
         $source = GoogleTranslationAdapter::getBCP47($language['source']);
@@ -243,15 +281,17 @@ final class TranslationClient implements TranslationRepository
         $translationServiceClient = new TranslationServiceClient();
         $formattedParent = $translationServiceClient->locationName($projectId, $location);
         try {
-            $chunk = [];
+            $chunk = []; // 翻訳リクエストサイズ
             foreach ($apiCollection as $i => $value) {
                 $translateionTargetFieldName = $value['translateionTargetFieldName'];
                 $chunk[] = $value[$translateionTargetFieldName];
                 if ($this->isLimitOver($chunk, $version) === true) {
                     $popData = array_pop($chunk);
+
                     // @return Google\Cloud\Translate\V3\TranslateTextResponse
                     $response = $translationServiceClient->translateText($chunk, $targetLanguageCode, $formattedParent, $optionalArgs);
-                    $translated  = GoogleTranslationAdapter::getTranlationDataListFromV3($apiCollection, $response);
+
+                    $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($response);
 
                     $chunk = [];
                     $chunk[] = $popData;
@@ -260,7 +300,8 @@ final class TranslationClient implements TranslationRepository
                 if ($this->isLast($apiCollection, $i) === true) {
                     // @return Google\Cloud\Translate\V3\TranslateTextResponse
                     $response = $translationServiceClient->translateText($chunk, $targetLanguageCode, $formattedParent, $optionalArgs);
-                    $translated  = GoogleTranslationAdapter::getTranlationDataListFromV3($apiCollection, $response);
+
+                    $googleTranslationResponseData = GoogleTranslationAdapter::getTranslationResponse($response);
                 }
             }
         } catch (Exception $e) {
@@ -272,7 +313,7 @@ final class TranslationClient implements TranslationRepository
             $translationServiceClient->close();
         }
 
-        return $translated;
+        return $googleTranslationResponseData->getResponse();
     }
 
     /**
@@ -327,7 +368,7 @@ final class TranslationClient implements TranslationRepository
     public function isV2LimitOver(array $contents): bool
     {
         $size = strlen(implode('', $contents));
-        if (self::V2_BYTE_LIMIT < $size) {
+        if (self::V2_BYTE_LIMIT * self::THRESHOLD < $size) {
             Log::debug("TranslationClient::isV2LimitOver", ['size' => $size]);
 
             return true;
@@ -353,7 +394,7 @@ final class TranslationClient implements TranslationRepository
     public function isV3LimitOver(array $contents): bool
     {
         $size = mb_strlen(implode('', $contents));
-        if (self::V3_CODEPOINT_LIMIT < $size) {
+        if (self::V3_CODEPOINT_LIMIT * self::THRESHOLD < $size) {
             Log::debug("TranslationClient::isV3LimitOver", ['Code points' => $size]);
 
             return true;

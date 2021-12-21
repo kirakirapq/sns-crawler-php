@@ -2,6 +2,7 @@
 
 namespace App\Application\UseCases\RiskWord;
 
+use App\Entities\BigQuery\Colmun;
 use App\Entities\ResponseData\Bigquery\BigQueryData;
 use App\Entities\RiskWord\RiskCommentList;
 
@@ -27,7 +28,7 @@ interface RiskWordUseCase
     public function getRiskComment(
         ?string $title = null,
         ?string $language = null,
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ): ?RiskCommentList;
 
     /**
@@ -45,6 +46,6 @@ interface RiskWordUseCase
         string $title,
         string $language,
         string $targetField,
-        ?string $createdAt = null
+        ?Colmun $createdAt = null
     ): bool;
 }

@@ -24,12 +24,6 @@ final class TranslationManager implements TranslationUseCase
 
     public function translation(TranslationRequestData $requestData): TranslationData
     {
-        // $requestData = TranslationDataAdapter::getTranslationRequestDataWithGAS($text, $from, $to);
-
-        // return $this->translationRepository->translationWithGAS($requestData);
-
-        // $requestData = TranslationDataAdapter::getTranslationRequestData($text, $from, $to);
-
         return $this->translationRepository->translation($requestData);
     }
 

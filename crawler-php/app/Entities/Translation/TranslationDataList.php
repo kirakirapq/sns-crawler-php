@@ -3,6 +3,7 @@
 namespace App\Entities\Translation;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 final class TranslationDataList
 {
@@ -51,13 +52,17 @@ final class TranslationDataList
 
         if (is_null($this->translationData) === true) {
             $this->translationData = $apiCollection->map(function ($item, $key) use ($trans) {
-                $item['translated'] = $trans[$key]['text'] ?? '';
+                if (array_key_exists($key, $trans) === true) {
+                    $item['translated'] = $trans[$key]['text'] ?? '';
+                }
 
                 return $item;
             });
         } else {
             $translationData = $apiCollection->map(function ($item, $key) use ($trans) {
-                $item['translated'] = $trans[$key]['text'] ?? '';
+                if (array_key_exists($key, $trans) === true) {
+                    $item['translated'] = $trans[$key]['text'] ?? '';
+                }
 
                 return $item;
             });

@@ -1,5 +1,7 @@
 <?php
 
+use App\Log\CustomJsonLineFormatter;
+use App\Log\CustomLineFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -63,6 +65,7 @@ return [
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
+            'tap' => [CustomLineFormatter::class,],
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
         ],
@@ -98,6 +101,7 @@ return [
         'stdout' => [
             'driver' => 'monolog',
             'handler' => StreamHandler::class,
+            'tap' => [CustomJsonLineFormatter::class,],
             'with' => [
                 'stream' => 'php://stdout',
             ],

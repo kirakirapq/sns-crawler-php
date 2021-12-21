@@ -2,7 +2,7 @@ FROM php:8.0-apache-buster
 
 ARG DEPLOY_ENV=develop
 ARG APP_DIR=crawler-php
-ENV APP_DIR APP_DIR
+ENV APP_DIR ${APP_DIR}
 ENV LARAVEL_ROOT /var/www/html/${APP_DIR}
 ENV APACHE_DOCUMENT_ROOT ${LARAVEL_ROOT}/public
 
@@ -16,8 +16,8 @@ RUN apt-get update \
 
 # sorce and composer file
 COPY --from=composer /usr/bin/composer /usr/bin/composer
-COPY ./${APP_DIR} /var/www/html
-WORKDIR /var/www/html/${APP_DIR}
+COPY ./${APP_DIR} ${LARAVEL_ROOT}
+WORKDIR ${LARAVEL_ROOT}
 RUN composer install
 RUN mv ${DEPLOY_ENV}.env .env
 
@@ -28,7 +28,7 @@ RUN mv /etc/apache2/mods-available/rewrite.load /etc/apache2/mods-enabled
 RUN /bin/sh -c a2enmod rewrite
 
 RUN chown -R www-data:www-data /var/www
-RUN chmod -R 777 /var/www/html/${APP_DIR}/storage
+RUN chmod -R 777 ${LARAVEL_ROOT}/storage
 
 USER www-data
 

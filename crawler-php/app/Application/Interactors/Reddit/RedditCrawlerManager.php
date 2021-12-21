@@ -13,6 +13,7 @@ use App\Application\UseCases\RiskWord\RiskWordUseCase;
 use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Reddit\RedditApiUseCase;
 use App\Application\UseCases\Reddit\RedditCrawlerUseCase;
+use App\Entities\BigQuery\Colmun;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;
 use App\Exceptions\OuterErrorException;
@@ -133,11 +134,17 @@ final class RedditCrawlerManager implements RedditCrawlerUseCase
      *
      * @param  mixed $title
      * @param  mixed $language
-     * @return string|null
+     * @return Colmun|null 指定したフィールドのCulmunをへ返却
      */
-    private function invokeGetLatestData(string $title, string $language): ?string
+    private function invokeGetLatestData(string $title, string $language): ?Colmun
     {
-        return $this->redditApiUseCase->getLatestData($title, $language);
+        $latestData = $this->redditApiUseCase->getLatestData($title, $language);
+
+        if (is_null($latestData) === true) {
+            return null;
+        }
+
+        return $latestData->getColmun('created');
     }
 
     /**
@@ -148,7 +155,7 @@ final class RedditCrawlerManager implements RedditCrawlerUseCase
      * @param  mixed $createdAt
      * @return Collection
      */
-    public function invokeGetThreadList(string $id, $createdAt = null): ?Collection
+    public function invokeGetThreadList(string $id, ?Colmun $createdAt = null): ?Collection
     {
         return $this->redditApiUseCase->getThreadList($id, $createdAt);
     }
@@ -161,7 +168,7 @@ final class RedditCrawlerManager implements RedditCrawlerUseCase
      * @param  mixed $createdAt
      * @return Collection
      */
-    public function invokeGetCommentList(Collection $threadList, $createdAt = null): ?Collection
+    public function invokeGetCommentList(Collection $threadList, ?Colmun $createdAt = null): ?Collection
     {
         return $this->redditApiUseCase->getCommentList($threadList, $createdAt);
     }
@@ -233,7 +240,7 @@ final class RedditCrawlerManager implements RedditCrawlerUseCase
      *
      * @return void
      */
-    public function invokeLoadRiskWordCheck(string $crawlName, string $title, string $language, string $createdAt = null)
+    public function invokeLoadRiskWordCheck(string $crawlName, string $title, string $language, ?Colmun $createdAt = null)
     {
         $targetField = 'text';
         $this->riskWordUseCase->loadRiskComment($crawlName, $title, $language, $targetField, $createdAt);
@@ -247,7 +254,7 @@ final class RedditCrawlerManager implements RedditCrawlerUseCase
      * @param  mixed $createdAt
      * @return RiskCommentList
      */
-    public function invokeGetRiskCommentList(string $title, string $language, string $createdAt = null): RiskCommentList
+    public function invokeGetRiskCommentList(string $title, string $language, ?Colmun $createdAt = null): RiskCommentList
     {
         return $this->riskWordUseCase->getRiskComment($title, $language, $createdAt);
     }

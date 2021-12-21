@@ -13,6 +13,7 @@ use App\Application\UseCases\RiskWord\RiskWordUseCase;
 use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Facebook\FacebookApiUseCase;
 use App\Application\UseCases\Facebook\FacebookCrawlerUseCase;
+use App\Entities\BigQuery\Colmun;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;
 use App\Exceptions\OuterErrorException;
@@ -58,11 +59,11 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
             $id = Config::get(sprintf('facebook.%s.%s.id', $title, $language));
 
             Log::info('invokeGetLatestData.');
-            $createdAt = $this->invokeGetLatestData($title, $language);
+            $colmun = $this->invokeGetLatestData($title, $language);
 
             // スレッド一覧取得
             Log::info('getFeedList.');
-            $feedList = $this->invokeGetFeedList($title, $language, $createdAt);
+            $feedList = $this->invokeGetFeedList($title, $language, $colmun);
 
             if (is_null($feedList) === true) {
                 return OuterApiResponseAdapter::getFromArray(
@@ -75,7 +76,7 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
 
             // スレッド一覧取得
             Log::info('invokeGetCommentList.');
-            $commentList = $this->invokeGetCommentList($title, $language, $feedList, $createdAt);
+            $commentList = $this->invokeGetCommentList($title, $language, $feedList, $colmun);
 
             // 新しいデータがなければ以下の処理をスキップ
             if ($commentList->count() === 0) {
@@ -106,10 +107,10 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
 
             // リスクワードを含むコメントを保存
             Log::info('invokeRiskWordCheck.');
-            $this->invokeLoadRiskWordCheck(Config::get('crawl.name'), $title, $language, $createdAt);
+            $this->invokeLoadRiskWordCheck(Config::get('crawl.name'), $title, $language, $colmun);
 
             // リスクコメントを取得
-            $riskCommentList = $this->invokeGetRiskCommentList($title, $language, $createdAt);
+            $riskCommentList = $this->invokeGetRiskCommentList($title, $language, $colmun);
 
             if (0 < $riskCommentList->getCommentList()->count()) {
                 // リスクコメントを通知
@@ -135,9 +136,15 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
      * @param  mixed $language
      * @return string|null
      */
-    private function invokeGetLatestData(string $title, string $language): ?string
+    private function invokeGetLatestData(string $title, string $language): ?Colmun
     {
-        return $this->facebookApiUseCase->getLatestData($title, $language);
+        $latestData = $this->facebookApiUseCase->getLatestData($title, $language);
+
+        if (is_null($latestData) === true) {
+            return null;
+        }
+
+        return $latestData->getColmun('created_at');
     }
 
     /**
@@ -145,12 +152,12 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
      * subreddit内のスレッド一覧取得
      *
      * @param  mixed $id
-     * @param  mixed $createdAt
+     * @param  mixed $latestData
      * @return Collection
      */
-    public function invokeGetFeedList(string $title, string $language, $createdAt = null): ?Collection
+    public function invokeGetFeedList(string $title, string $language, $colmun = null): ?Collection
     {
-        return $this->facebookApiUseCase->getFeedList($title, $language, $createdAt);
+        return $this->facebookApiUseCase->getFeedList($title, $language, $colmun);
     }
 
     /**
@@ -158,12 +165,12 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
      * thread一覧のコメントを取得する
      *
      * @param  mixed $threadList
-     * @param  mixed $createdAt
+     * @param  mixed $latestData
      * @return Collection
      */
-    public function invokeGetCommentList(string $title, string $language, Collection $feedList, $createdAt = null): ?Collection
+    public function invokeGetCommentList(string $title, string $language, Collection $feedList, $colmun = null): ?Collection
     {
-        return $this->facebookApiUseCase->getCommentList($title, $language, $feedList, $createdAt);
+        return $this->facebookApiUseCase->getCommentList($title, $language, $feedList, $colmun);
     }
 
     /**
@@ -231,10 +238,10 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
      *
      * @return void
      */
-    public function invokeLoadRiskWordCheck(string $crawlName, string $title, string $language, string $createdAt = null)
+    public function invokeLoadRiskWordCheck(string $crawlName, string $title, string $language, ?Colmun $colmun = null)
     {
         $targetField = 'message';
-        $this->riskWordUseCase->loadRiskComment($crawlName, $title, $language, $targetField, $createdAt);
+        $this->riskWordUseCase->loadRiskComment($crawlName, $title, $language, $targetField, $colmun);
     }
 
     /**
@@ -242,12 +249,12 @@ final class FacebookCrawlerManager implements FacebookCrawlerUseCase
      *
      * @param  mixed $title
      * @param  mixed $language
-     * @param  mixed $createdAt
+     * @param  mixed $colmun
      * @return RiskCommentList
      */
-    public function invokeGetRiskCommentList(string $title, string $language, string $createdAt = null): RiskCommentList
+    public function invokeGetRiskCommentList(string $title, string $language, ?Colmun $colmun = null): RiskCommentList
     {
-        return $this->riskWordUseCase->getRiskComment($title, $language, $createdAt);
+        return $this->riskWordUseCase->getRiskComment($title, $language, $colmun);
     }
 
     /**

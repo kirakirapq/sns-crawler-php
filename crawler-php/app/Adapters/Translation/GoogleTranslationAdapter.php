@@ -9,6 +9,7 @@ use App\Entities\Translation\TranslationDataList;
 use App\Entities\Translation\TranslationData;
 use Illuminate\Support\Collection;
 use Google\Cloud\Translate\V3\TranslateTextResponse;
+use App\Entities\Translation\GoogleTlanslationResponseData;
 
 class GoogleTranslationAdapter
 {
@@ -58,32 +59,26 @@ class GoogleTranslationAdapter
 
     /**
      * getTranlationDataListFromV2
-     * 有料版のGoogle翻訳API V2のレスポンスからTranslationDataList取得
+     * 有料版のGoogle翻訳API結果（配列形式）をAPIコレクションに詰める
      *
      * @param  mixed $apiCollection
      * @param  mixed $translated
      * @return TranslationDataList
      */
-    static public function getTranlationDataListFromV2(Collection $apiCollection, array $translated): TranslationDataList
+    static public function getTranlationDataListFromArray(Collection $apiCollection, array $translated): TranslationDataList
     {
         return TranslationDataAdapter::getTranslationDataList($apiCollection, collect($translated));
     }
 
     /**
-     * getTranlationDataListFromV3
-     * 有料版のGoogle翻訳API V3のレスポンスからTranslationDataList取得
+     * convertToArrayFromTranslateTextResponse
+     * 有料版の翻訳結果を共通のデータ形式（GoogleTlanslationResponseData）に変換する
      *
-     * @param  mixed $apiCollection
-     * @param  mixed $translateTextResponse
-     * @return TranslationDataList
+     * @param  array|TranslateTextResponse $translateTextResponse
+     * @return GoogleTlanslationResponseData
      */
-    static public function getTranlationDataListFromV3(Collection $apiCollection, TranslateTextResponse $translateTextResponse): TranslationDataList
+    static public function getTranslationResponse(mixed $translateTextResponse): GoogleTlanslationResponseData
     {
-        $translated = [];
-        foreach ($translateTextResponse->getTranslations() as $key => $value) {
-            $translated[]['text'] = $value->getTranslatedText();
-        }
-
-        return TranslationDataAdapter::getTranslationDataList($apiCollection, collect($translated));
+        return GoogleTlanslationResponseData::getInstance($translateTextResponse);
     }
 }
