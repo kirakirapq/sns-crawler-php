@@ -25,10 +25,14 @@ class TranslationApiController extends Controller
 
     /**
      * api spec:
-     * https://extra-confluence.gree-office.net/pages/viewpage.action?pageId=372821393
+     * endpoint: /api/translation
+     * method: post
+     * request parameter:
      * contents.[] : transla text
      * language.from : from language
      * language.to : to language
+     * example: language format is "ISO 639-1"
+     * {"contents": ["string", "string"], "language": {"from":"en", "to": "ja"}}
      *
      * @return \Illuminate\Http\Response
      */
