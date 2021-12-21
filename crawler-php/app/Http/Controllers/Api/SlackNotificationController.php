@@ -22,7 +22,28 @@ class SlackNotificationController extends Controller
 
     /**
      * api spec:
-     * https://extra-confluence.gree-office.net/pages/viewpage.action?pageId=372821393
+     * endpoint: /api/notification/slack/riskword
+     * method: post
+     * request parameters example:
+     * {
+     *  "sns": "twitter",
+     *  "messages": [
+     *   {
+     *       "app_name": "kms",
+     *       "language": "en",
+     *       "text": "text001........",
+     *       "translated": "translatedxxxxxxxxxxxx",
+     *         "created_at": "2021-01-01 00:00:00"
+     *     },
+     *     {
+     *       "id": "id-002",
+     *         "app_name": "kms",
+     *         "language": "en",
+     *         "text": "text002xxxxxxx",
+     *         "translated": "translated2"
+     *     }
+     *   ]
+     * }
      *
      * @return \Illuminate\Http\Response
      */

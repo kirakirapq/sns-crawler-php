@@ -25,7 +25,8 @@ class SnsCrawlController extends Controller
     }
     /**
      * api spec:
-     * https://extra-confluence.gree-office.net/pages/viewpage.action?pageId=372821393
+     * endpoint: /api/crawl/sns/{sns}/title/{title}/lunguage/{lunguage}
+     * method: get
      *
      * @return \Illuminate\Http\Response
      */

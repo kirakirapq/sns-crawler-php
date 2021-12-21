@@ -20,7 +20,8 @@ class RiskWordController extends Controller
 
     /**
      * api spec:
-     * https://extra-confluence.gree-office.net/pages/viewpage.action?pageId=372821393
+     * end point: /api//riskword/comment/sns/{sns}/title/{title}/lunguage/{lunguage}/created_at/{created_at?}
+     * method: get
      *
      * @return \Illuminate\Http\Response
      */

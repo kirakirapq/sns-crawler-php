@@ -16,7 +16,7 @@ class OuterErrorException extends Exception
             'Layer Code' => $errorDefinition->getLayerCode(),
             'Error Code' => $errorDefinition->getErrorCode(),
             'Error Message' => $message,
-            'More information' => 'https://extra-confluence.gree-office.net/pages/viewpage.action?pageId=372821393',
+            'More information' => '',
         ];
         Log::error(get_called_class(), $message);
 
