@@ -7,6 +7,7 @@ use App\Application\InputData\Translation\TranslationRequestData;
 use App\Application\InputData\Translation\TranslationRequestDataWithGAS;
 use App\Entities\Translation\TranslationDataList;
 use App\Exceptions\OuterErrorException;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 use \Mockery;
@@ -38,6 +39,11 @@ class TranslationDataAdapterTest extends TestCase
      */
     public function getTranslationRequestData($version): void
     {
+        Mockery::mock('alias:' . Config::class)
+            ->shouldReceive('get')
+            ->andReturn('', '')
+            ->times(2);
+
         $request = [
             'contents' => ['', ''],
             'language' => [

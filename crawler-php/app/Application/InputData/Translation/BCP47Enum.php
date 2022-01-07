@@ -5,6 +5,6 @@ namespace App\Application\InputData\Translation;
 class BCP47Enum
 {
     const JA = 'ja';
-    const KO = 'kr';
+    const KO = 'ko';
     const EN = 'en-US';
 }

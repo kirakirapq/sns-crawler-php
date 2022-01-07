@@ -3,6 +3,7 @@
 namespace App\Adapters;
 
 use App\Application\OutputData\InnerApiResponse\BigQueryResponse;
+use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use App\Entities\BigQuery\Colmun;
 use App\Entities\BigQuery\LatestData;
 use App\Entities\ResponseData\BigQuery\BigQueryData;
@@ -15,14 +16,14 @@ final class BigQueryResponseAdapter
      * translationMentionDataList
      *
      * @param  mixed $httpResponse
-     * @return void
+     * @return InnerApiResponse
      */
-    static public function getBigQueryResponse(int $statusCode, ?QueryResults $result = null): BigQueryResponse
+    static public function getBigQueryResponse(int $statusCode, ?QueryResults $result = null): InnerApiResponse
     {
         return new BigQueryResponse($statusCode, $result);
     }
 
-    static public function getBigqueryData(BigQueryResponse $apiResponse): BigQueryData
+    static public function getBigqueryData(InnerApiResponse $apiResponse): BigQueryData
     {
         return new BigqueryData($apiResponse);
     }

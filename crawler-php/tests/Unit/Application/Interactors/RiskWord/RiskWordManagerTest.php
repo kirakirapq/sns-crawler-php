@@ -1,6 +1,6 @@
 <?php
 
-namespace Unit\Adapters;
+namespace Unit\Application\interractors;
 
 use App\Adapters\SqlModelAdapter;
 use App\Application\InputData\BigQuerySqlModel;
@@ -39,10 +39,6 @@ class RiskWordManagerTest extends TestCase
             $response->shouldReceive('getErrorMessage')->once();
             Log::shouldReceive('error')->once();
         }
-        $model = Mockery::mock(BigQuerySqlModel::class);
-
-        Mockery::mock('alias:' . SqlModelAdapter::class)
-            ->shouldReceive(['getRiskWordListSql' => $model])->once();
 
         Mockery::mock('alias:' . Config::class)
             ->shouldReceive(['get' => ''])
@@ -53,7 +49,8 @@ class RiskWordManagerTest extends TestCase
             ->shouldReceive(['getProjectId' => ''])
             ->once();
         $bigQueryUseCase->shouldReceive(['getDatasetId' => ''])->once();
-        $bigQueryUseCase->shouldReceive(['getData' => $response])->with($model)->once();
+        $bigQueryUseCase->shouldReceive(['getData' => $response])
+            ->once();
 
         $manager = new RiskWordManager($bigQueryUseCase->getMock());
         $actual = $manager->getRiskWordList();
@@ -85,7 +82,7 @@ class RiskWordManagerTest extends TestCase
      * @param  mixed $expected
      * @return void
      */
-    public function getRiskComment($dataList, $statusCode, $errorMessage, $hasError, $expected): void
+    public function getRiskComment($dataList, $statusCode, $errorMessage, $expected): void
     {
         Mockery::mock('alias:' . Config::class)
             ->shouldReceive(['get' => 'twitter'])
@@ -96,34 +93,12 @@ class RiskWordManagerTest extends TestCase
         $riskWordResponse = Mockery::mock(BigQueryData::class)
             ->shouldReceive(
                 [
-                    'getErrorMessage' => $errorMessage,
-                    'hasError' => $hasError,
-                ]
-
-            )
-            ->once();
-
-        if ($hasError === true) {
-            $riskWordResponse->shouldReceive('getDataList', 'getStatusCode')->never();
-            Log::shouldReceive('error')->once();
-        } else {
-            $riskWordResponse->shouldReceive(
-                [
-                    'getDataList' => collect($dataList),
                     'getStatusCode' => $statusCode,
-                ]
-            )->once();
-        }
-
-        $model = Mockery::mock(BigQuerySqlModel::class);
-        Mockery::mock('alias:' . SqlModelAdapter::class)
-            ->shouldReceive(
-                [
-                    'getRisCommentListSql' => $model,
+                    'getDataList' => collect($dataList),
+                    'getErrorMessage' => $errorMessage,
                 ]
             )
-            ->atMost()
-            ->times(1)
+            ->once()
             ->getMock();
 
         $bigQueryUseCase = Mockery::mock(BigQueryUseCase::class);
@@ -132,7 +107,7 @@ class RiskWordManagerTest extends TestCase
             'getDatasetId' => '',
             'getTableId' => '',
             'getRiskCommentTableId' => '',
-            'getData' => $riskWordResponse->getMock()
+            'getData' => $riskWordResponse
         ]);
 
         $manager = new RiskWordManager($bigQueryUseCase);
@@ -156,7 +131,6 @@ class RiskWordManagerTest extends TestCase
                 ],
                 'statusCode' => 200,
                 'errorMessage' => 'no message',
-                'hasError' => false,
                 'expected' => (new RiskCommentList(
                     200,
                     collect([
@@ -178,8 +152,11 @@ class RiskWordManagerTest extends TestCase
                 ],
                 'statusCode' => 500,
                 'errorMessage' => 'server error.',
-                'hasError' => true,
-                'expected' => null
+                'expected' => (new RiskCommentList(
+                    500,
+                    collect([]),
+                    'server error.'
+                ))
             ],
         ];
     }
@@ -229,18 +206,6 @@ class RiskWordManagerTest extends TestCase
             $insertResponse->shouldReceive('getBody')->once();
             Log::shouldReceive('error')->once();
         }
-
-        $model = Mockery::mock(BigQuerySqlModel::class);
-        Mockery::mock('alias:' . SqlModelAdapter::class)
-            ->shouldReceive(
-                [
-                    'getBigQueryRiskWordSql' => $model,
-                    'getRiskWordListSql' => $model
-                ]
-            )
-            ->atMost()
-            ->times(1)
-            ->getMock();
 
         $bigQueryUseCase = Mockery::mock(BigQueryUseCase::class);
         $bigQueryUseCase->shouldReceive([

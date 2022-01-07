@@ -2,6 +2,8 @@
 
 namespace App\Application\InputData\Translation;
 
+use App\Application\InputData\RequestType;
+
 /**
  * 翻訳用API
  * Twitter 該当のuser_idのメンションがついたコメントを取得するためのリクエストデータ
@@ -35,7 +37,7 @@ final class TranslationRequestDataWithGAS
     {
         return [
             'headers' => [
-                'Accept'        => 'application/json',
+                'Accept' => 'application/json',
             ]
         ];
     }

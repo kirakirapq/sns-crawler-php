@@ -2,9 +2,10 @@
 
 namespace App\Application\InputData\Facebook\ValueObject;
 
+use App\Exceptions\ObjectDefinitionErrorException;
 use \ReflectionClass;
 
-class FacebookRequestType
+final class FacebookRequestType
 {
     private string $type;
 
@@ -12,7 +13,9 @@ class FacebookRequestType
     {
         $reflectionClass = new ReflectionClass(FacebookRequestTypeEnum::class);
         if (in_array($type, $reflectionClass->getConstants()) === false) {
-            // TODO エラー
+            $message = 'type must be the value defined in the FacebookRequestTypeEnum class';
+
+            throw new ObjectDefinitionErrorException($message, 500);
         }
 
         $this->type = $type;

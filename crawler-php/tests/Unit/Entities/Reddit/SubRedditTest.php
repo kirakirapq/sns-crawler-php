@@ -2,12 +2,10 @@
 
 namespace Unit\Entities\Reddit;
 
-use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use App\Entities\Reddit\SubReddit;
 use App\Entities\Reddit\Thread;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
-use \Mockery;
 
 class SubRedditTest extends TestCase
 {
@@ -20,7 +18,7 @@ class SubRedditTest extends TestCase
      * @param  mixed $permalink
      * @return void
      */
-    public function construct(bool $hasError, string $permalink): void
+    public function construct(string $permalink): void
     {
         $bodyArray['data']['children'] = [
             [
@@ -32,22 +30,7 @@ class SubRedditTest extends TestCase
                 ],
             ]
         ];
-
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => 200,
-                'hasError' => $hasError,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-
-        if ($hasError === true) {
-            $apiResponse->shouldReceive(['getBody' => ''])->once();
-        } else {
-            $apiResponse->shouldReceive(['getBody' => ''])->never();
-        }
-
-        $model = new SubReddit($apiResponse->getMock());
+        $model = new SubReddit($bodyArray);
 
         $this->assertInstanceOf(SubReddit::class, $model);
     }
@@ -56,19 +39,15 @@ class SubRedditTest extends TestCase
     {
         return [
             'has error is true case' => [
-                'hasError' => true,
                 'permalink' => '/test',
             ],
             'has error is false case' => [
-                'hasError' => false,
                 'permalink' => '/test',
             ],
             'thread is true case' => [
-                'hasError' => false,
                 'permalink' => '/test',
             ],
             'thread is false case' => [
-                'hasError' => true,
                 'permalink' => 'http://hoge.fuga/test',
             ],
         ];
@@ -92,18 +71,8 @@ class SubRedditTest extends TestCase
                 ],
             ]
         ];
-
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => 200,
-                'hasError' => false,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-        $apiResponse->shouldReceive(['getBody' => ''])->never();
-
         $permalink = '/test/test';
-        $model = new SubReddit($apiResponse->getMock());
+        $model = new SubReddit($bodyArray);
 
         $this->assertEquals(sprintf('https://%s%s', $model::HOST_NAME, $permalink), $model->getUrl($permalink));
     }
@@ -124,17 +93,7 @@ class SubRedditTest extends TestCase
                 'data' => $bodyDataArray,
             ]
         ];
-
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => 200,
-                'hasError' => false,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-        $apiResponse->shouldReceive(['getBody' => ''])->never();
-
-        $model = new SubReddit($apiResponse->getMock());
+        $model = new SubReddit($bodyArray);
 
         $this->assertEquals($expected, $model->getThreadList());
     }
@@ -169,184 +128,15 @@ class SubRedditTest extends TestCase
     }
 
     /**
-     * getStatusCode
-     * @test
-     * @dataProvider getStatusCodeDataProvider
-     *
-     * @param  mixed $code
-     * @param  mixed $expected
-     * @return void
-     */
-    public function getStatusCode(int $code, int $expected): void
-    {
-        $bodyArray['data']['children'] = [
-            [
-                'data' => [
-                    'subreddit' => '',
-                    'title' => '',
-                    'selftext' => '',
-                    'permalink' => '/test',
-                ],
-            ]
-        ];
-
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => $code,
-                'hasError' => false,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-        $apiResponse->shouldReceive(['getBody' => ''])->never();
-
-        $model = new SubReddit($apiResponse->getMock());
-
-        $this->assertEquals($expected, $model->getStatusCode());
-    }
-
-    public function getStatusCodeDataProvider(): array
-    {
-        return [
-            '200 case' => [
-                'code' => 200,
-                'expected' => 200,
-            ],
-            '404 case' => [
-                'code' => 404,
-                'expected' => 404,
-            ]
-        ];
-    }
-
-    /**
-     * hasError
-     * @test
-     * @dataProvider hasErrorDataProvider
-     *
-     * @param  mixed $code
-     * @param  mixed $hasError
-     * @param  mixed $expected
-     * @return void
-     */
-    public function hasError(int $code, bool $hasError, bool $expected): void
-    {
-        $bodyArray['data']['children'] = [
-            [
-                'data' => [
-                    'subreddit' => '',
-                    'title' => '',
-                    'selftext' => '',
-                    'permalink' => '/test',
-                ],
-            ]
-        ];
-
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => $code,
-                'hasError' => $hasError,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-        if ($hasError === true) {
-            $apiResponse->shouldReceive(['getBody' => ''])->once();
-        } else {
-            $apiResponse->shouldReceive(['getBody' => ''])->never();
-        }
-
-        $model = new SubReddit($apiResponse->getMock());
-
-        $this->assertEquals($expected, $model->hasError());
-    }
-
-    public function hasErrorDataProvider(): array
-    {
-        return [
-            'has error is false case' => [
-                'code' => 200,
-                'hasError' => false,
-                'expected' => false,
-            ],
-            'has error is true case' => [
-                'code' => 404,
-                'hasError' => true,
-                'expected' => true,
-            ]
-        ];
-    }
-
-    /**
-     * getErrorMessage
-     * @test
-     * @dataProvider getErrorMessageDataProvider
-     *
-     * @param  mixed $code
-     * @param  mixed $hasError
-     * @param  mixed $errorMessage
-     * @param  mixed $expected
-     * @return void
-     */
-    public function getErrorMessage(int $code, bool $hasError, string $errorMessage, ?string $expected): void
-    {
-        $bodyArray['data']['children'] = [
-            [
-                'data' => [
-                    'subreddit' => '',
-                    'title' => '',
-                    'selftext' => '',
-                    'permalink' => '/test',
-                ],
-            ]
-        ];
-
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => $code,
-                'hasError' => $hasError,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-        if ($hasError === true) {
-            $apiResponse->shouldReceive(['getBody' => $errorMessage])->once();
-        } else {
-            $apiResponse->shouldReceive(['getBody' => $errorMessage])->never();
-        }
-
-        $model = new SubReddit($apiResponse->getMock());
-
-        $this->assertEquals($expected, $model->getErrorMessage());
-    }
-
-    public function getErrorMessageDataProvider(): array
-    {
-        return [
-            'has error is false case' => [
-                'code' => 200,
-                'hasError' => false,
-                'errorMessage' => 'error message',
-                'expected' => null,
-            ],
-            'has error is true case' => [
-                'code' => 404,
-                'hasError' => true,
-                'errorMessage' => 'error message',
-                'expected' => 'error message',
-            ]
-        ];
-    }
-
-    /**
      * isThread
      * @test
      * @dataProvider isThreadDataProvider
      *
-     * @param  mixed $code
-     * @param  mixed $hasError
      * @param  mixed $url
      * @param  mixed $expected
      * @return void
      */
-    public function isThread(int $code, bool $hasError, string $url, bool $expected): void
+    public function isThread(string $url, bool $expected): void
     {
         $bodyArray['data']['children'] = [
             [
@@ -359,20 +149,7 @@ class SubRedditTest extends TestCase
             ]
         ];
 
-        $apiResponse = Mockery::mock(InnerApiResponse::class)
-            ->shouldReceive([
-                'getStatusCode' => $code,
-                'hasError' => $hasError,
-                'getBodyAsArray' => $bodyArray,
-            ])
-            ->once();
-        if ($hasError === true) {
-            $apiResponse->shouldReceive(['getBody' => ''])->once();
-        } else {
-            $apiResponse->shouldReceive(['getBody' => ''])->never();
-        }
-
-        $model = new SubReddit($apiResponse->getMock());
+        $model = new SubReddit($bodyArray);
         $actual = $model->isThread($model->getUrl($url));
 
         $this->assertEquals($expected, $actual);
@@ -382,14 +159,10 @@ class SubRedditTest extends TestCase
     {
         return [
             'thread is false case' => [
-                'code' => 200,
-                'hasError' => false,
                 'url' => 'http://hoge.fuga/test',
                 'expected' => false,
             ],
             'thread is true case' => [
-                'code' => 200,
-                'hasError' => false,
                 'url' => '/test',
                 'expected' => true,
             ]

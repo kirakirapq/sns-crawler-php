@@ -80,7 +80,7 @@ final class FacebookApiManager implements FacebookApiUseCase
         $nextPage = null;
         $repeat = true;
         do {
-            $requestModel = FacebookApiAdapter::getFeedReqestData($type, $title, $language, $nextPage);
+            $requestModel = FacebookApiAdapter::getFeedRueqestData($type, $title, $language, $nextPage);
             $fbFeedDataList = $this->repository->getFacebookDataList($requestModel);
 
             if ($fbFeedDataList->hasNextPage() === false) {

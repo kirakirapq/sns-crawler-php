@@ -2,7 +2,6 @@
 
 namespace App\Entities\Reddit;
 
-// use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use Illuminate\Support\Collection;
 
 final class SubReddit

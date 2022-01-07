@@ -3,8 +3,6 @@
 namespace App\Application\Interactors\Facebook;
 
 use App\Adapters\OuterApiResponseAdapter;
-use App\Adapters\TranslationRequestDataApiAdapter;
-use App\Application\OutputData\InnerApiResponse\NotificationResponseModel;
 use App\Application\OutputData\OuterApiResponse\OuterApiResponse;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Csv\CsvUseCase;
@@ -14,13 +12,13 @@ use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Facebook\FacebookApiUseCase;
 use App\Application\UseCases\Facebook\FacebookCrawlerUseCase;
 use App\Entities\BigQuery\Colmun;
+use App\Entities\Notification\NotificationResponseModel;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;
 use App\Exceptions\OuterErrorException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
-use \DateTime;
 
 /**
  * FacebookCrawlerUseCaseの実装クラス

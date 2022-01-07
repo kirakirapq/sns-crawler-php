@@ -2,7 +2,6 @@
 
 namespace App\Entities\Translation;
 
-use Illuminate\Support\Collection;
 use Google\Cloud\Translate\V3\TranslateTextResponse;
 
 class GoogleTlanslationResponseData
@@ -26,8 +25,9 @@ class GoogleTlanslationResponseData
      *
      * @return GoogleTlanslationResponseData
      */
-    final public static function getInstance(mixed $translationResponse): GoogleTlanslationResponseData
-    {
+    final public static function getInstance(
+        TranslateTextResponse|array $translationResponse
+    ): GoogleTlanslationResponseData {
         if (is_null(self::$_instance)) {
             self::$_instance = new GoogleTlanslationResponseData($translationResponse);
         } else {

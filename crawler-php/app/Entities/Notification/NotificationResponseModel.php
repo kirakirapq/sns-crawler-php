@@ -6,13 +6,10 @@ namespace App\Entities\Notification;
  * InnerApiResponse
  * ResponseData
  */
-class NotificationResponseModel
+final class NotificationResponseModel
 {
-    private array $body;
-
-    public function __construct($body)
+    public function __construct(public array $body)
     {
-        $this->body = $body;
     }
 
     /**

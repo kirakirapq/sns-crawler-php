@@ -6,6 +6,8 @@ use App\Adapters\SqlModelAdapter;
 use App\Application\InputData\BigQueryRiskWordSql;
 use App\Application\InputData\LatestCommentSql;
 use App\Application\InputData\RiskWordListSql;
+use App\Entities\BigQuery\Colmun;
+use App\Entities\BigQuery\ColmunType;
 use Tests\TestCase;
 use \Mockery;
 
@@ -26,9 +28,10 @@ class SqlModelAdapterTest extends TestCase
         $riskWords = collect([]);
         $appName = '';
         $language = '';
-        $createdAt = null;
+        $targetField = '';
+        $createdAt = new Colmun('dt', '2021-01-01', ColmunType::DATE);
 
-        $response = new BigQueryRiskWordSql(
+        $expected = new BigQueryRiskWordSql(
             $projectId,
             $datasetId,
             $tableId,
@@ -36,11 +39,9 @@ class SqlModelAdapterTest extends TestCase
             $riskWords,
             $appName,
             $language,
+            $targetField,
             $createdAt
         );
-
-        $adapter = Mockery::mock('alias:' . SqlModelAdapter::class);
-        $adapter->shouldReceive('getBigQueryRiskWordSql')->andReturn($response);
 
         $actual = SqlModelAdapter::getBigQueryRiskWordSql(
             $projectId,
@@ -50,10 +51,13 @@ class SqlModelAdapterTest extends TestCase
             $riskWords,
             $appName,
             $language,
+            $targetField,
             $createdAt
         );
 
         $this->assertInstanceOf(BigQueryRiskWordSql::class, $actual);
+
+        $this->assertEquals($expected, $actual);
     }
 
     /**
@@ -68,14 +72,11 @@ class SqlModelAdapterTest extends TestCase
         $datasetId = '';
         $tableId = '';
 
-        $response = new LatestCommentSql(
+        $expected = new LatestCommentSql(
             $projectId,
             $datasetId,
             $tableId
         );
-
-        $adapter = Mockery::mock('alias:' . SqlModelAdapter::class);
-        $adapter->shouldReceive('getLatestCommentSql')->andReturn($response);
 
         $actual = SqlModelAdapter::getLatestCommentSql(
             $projectId,
@@ -84,6 +85,7 @@ class SqlModelAdapterTest extends TestCase
         );
 
         $this->assertInstanceOf(LatestCommentSql::class, $actual);
+        $this->assertEquals($expected, $actual);
     }
 
     /**
@@ -97,13 +99,10 @@ class SqlModelAdapterTest extends TestCase
         $projectId = '';
         $datasetId = '';
 
-        $response = new RiskWordListSql(
+        $expected = new RiskWordListSql(
             $projectId,
             $datasetId
         );
-
-        $adapter = Mockery::mock('alias:' . SqlModelAdapter::class);
-        $adapter->shouldReceive('getRiskWordListSql')->andReturn($response);
 
         $actual = SqlModelAdapter::getRiskWordListSql(
             $projectId,
@@ -111,5 +110,6 @@ class SqlModelAdapterTest extends TestCase
         );
 
         $this->assertInstanceOf(RiskWordListSql::class, $actual);
+        $this->assertEquals($expected, $actual);
     }
 }

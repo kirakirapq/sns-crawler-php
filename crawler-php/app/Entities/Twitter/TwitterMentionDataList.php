@@ -10,15 +10,10 @@ class TwitterMentionDataList
 {
     private static $_instance;
 
-    // private int $statusCode;
-
     private ?Collection $mentionList = null;
 
     private ?TwitterMetaData $metaData = null;
 
-    // private ?string $errorMessage = null;
-
-    // private bool $hasError;
 
     /**
      * __construct
@@ -47,26 +42,6 @@ class TwitterMentionDataList
         return self::$_instance;
     }
 
-    // /**
-    //  * getStatusCode
-    //  *
-    //  * @return int
-    //  */
-    // public function getStatusCode(): int
-    // {
-    //     return $this->statusCode;
-    // }
-
-    // /**
-    //  * hasError
-    //  *
-    //  * @return bool
-    //  */
-    // public function hasError(): bool
-    // {
-    //     return $this->hasError;
-    // }
-
     /**
      * getMentionList
      *
@@ -87,33 +62,10 @@ class TwitterMentionDataList
         return $this->metaData;
     }
 
-    // /**
-    //  * getErrorMessage
-    //  *
-    //  * @return
-    //  */
-    // public function getErrorMessage()
-    // {
-    //     return $this->errorMessage;
-    // }
-
     public function setData($meta, $data)
     {
         $this->metaData = new TwitterMetaData($meta);
         $this->addMentionList($data);
-
-        // $this->statusCode = $apiResponse->getStatusCode();
-        // $this->hasError = $apiResponse->hasError();
-        // $resltData = $apiResponse->getBodyAsArray();
-
-
-
-        // if ($this->hasError === false) {
-        //     $this->metaData = new TwitterMetaData($resltData['meta']);
-        //     $this->addMentionList($resltData['data'] ?? []);
-        // } else {
-        //     $this->errorMessage = $apiResponse->getBody();
-        // }
     }
 
     /**

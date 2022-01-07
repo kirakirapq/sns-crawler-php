@@ -2,12 +2,11 @@
 
 namespace Unit\Application\Interactors\Twitter;
 
-use App\Adapters\SqlModelAdapter;
-use App\Application\InputData\BigQuerySqlModel;
+use App\Adapters\BigQueryResponseAdapter;
 use App\Application\Interactors\Twitter\TwitterApiManager;
-use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use App\Application\Repositories\TwitterApiRepository;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
+use App\Entities\BigQuery\Colmun;
 use App\Entities\ResponseData\Bigquery\BigQueryData;
 use App\Entities\Twitter\TwitterMentionDataList;
 use App\Entities\Twitter\TwitterMetaData;
@@ -37,6 +36,9 @@ class TwitterApiManagerTest extends TestCase
         if (is_null($responseData) === true) {
             $response = null;
         } else {
+            if ($responseData['hasError'] === true) {
+                Log::shouldReceive('error');
+            }
             $response = Mockery::mock(BigQueryData::class)
                 ->shouldReceive($responseData)
                 ->getMock();
@@ -52,10 +54,6 @@ class TwitterApiManagerTest extends TestCase
                 'getData' => $response,
             ]
         )->getMock();
-
-        $model = Mockery::mock(BigQuerySqlModel::class);
-        Mockery::mock('alias:' . SqlModelAdapter::class)
-            ->shouldReceive(['getLatestCommentSql' => $model])->atMost()->once();
 
         $manager = new TwitterApiManager($repository, $bigQueryUseCace);
         $actual = $manager->getLatestData('title', 'en');
@@ -102,7 +100,7 @@ class TwitterApiManagerTest extends TestCase
                     'getDataList->count' => 1,
                     'getDataList->first' => []
                 ],
-                'expected' => null,
+                'expected' => BigQueryResponseAdapter::getLatestData('', collect([])),
             ],
             'normal case' => [
                 'existsTable' => true,
@@ -112,7 +110,7 @@ class TwitterApiManagerTest extends TestCase
                     'getDataList->count' => 1,
                     'getDataList->first' => ['created_at' => '2021-01-01']
                 ],
-                'expected' => '2021-01-01',
+                'expected' => BigQueryResponseAdapter::getLatestData('', collect([['created_at' => '2021-01-01']])),
             ]
         ];
     }
@@ -121,20 +119,18 @@ class TwitterApiManagerTest extends TestCase
      * getTwitterMentionList
      * @test
      * @dataProvider getTwitterMentionListDataProvider
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      *
      * @param  mixed $count
      * @param  mixed $pushData
-     * @param  mixed $hasError
      * @param  mixed $paginationToken
      * @param  mixed $createdAt
      * @return void
      */
-    public function getTwitterMentionList($count, $pushData, $hasError, $paginationToken, $createdAt): void
+    public function getTwitterMentionList($count, $pushData, $paginationToken, $createdAt): void
     {
         Log::shouldReceive('debug');
-        if ($hasError === true) {
-            Log::shouldReceive('error');
-        }
 
         $expected = collect([]);
         $mentionList = collect([]);
@@ -145,9 +141,9 @@ class TwitterApiManagerTest extends TestCase
             if (is_null($createdAt) === true) {
                 $expected->push($data);
             } else {
-                $targetDt = $pushData[$i]['created_at'] ?? $createdAt;
+                $targetDt = $pushData[$i]['created_at'] ?? $createdAt->getValue();
 
-                $createdAtDate = new Carbon($createdAt);
+                $createdAtDate = new Carbon($createdAt->getValue());
                 $targetDtDate = new Carbon($targetDt);
                 if ($createdAtDate->gt($targetDtDate)) {
                     $expected->push($pushData[$i]);
@@ -188,7 +184,6 @@ class TwitterApiManagerTest extends TestCase
         $response->shouldReceive(
             [
                 'getMetaData' => $metaData,
-                'hasError' => $hasError,
             ]
         );
         if (is_null($paginationToken) === true) {
@@ -198,10 +193,6 @@ class TwitterApiManagerTest extends TestCase
             $response->shouldReceive('getMentionList')
                 ->andReturnValues([$mentionList, $mentionListLoopData]);
         }
-        if ($hasError === true) {
-            $response->shouldReceive('getErrorMessage')->once();
-        }
-
 
         $repository = Mockery::mock(TwitterApiRepository::class);
         $repository->shouldReceive(
@@ -228,7 +219,6 @@ class TwitterApiManagerTest extends TestCase
                         'created_at' => '',
                     ]
                 ],
-                'hasError' => false,
                 'paginationToken' => null,
                 'createdAt' => null,
             ],
@@ -252,9 +242,8 @@ class TwitterApiManagerTest extends TestCase
                     ],
 
                 ],
-                'hasError' => false,
                 'paginationToken' => null,
-                'createdAt' => '2021-03-01',
+                'createdAt' => new Colmun('created_at', '2021-03-01'),
             ],
             'has not error and paginationToken is null case' => [
                 'count' => 5,
@@ -276,7 +265,6 @@ class TwitterApiManagerTest extends TestCase
                     ],
 
                 ],
-                'hasError' => false,
                 'paginationToken' => null,
                 'createdAt' => null,
             ],
@@ -300,32 +288,7 @@ class TwitterApiManagerTest extends TestCase
                     ],
 
                 ],
-                'hasError' => false,
                 'paginationToken' => 'page toke',
-                'createdAt' => null,
-            ],
-            'has error case' => [
-                'count' => 5,
-                'pushData' => [
-                    [
-                        'created_at' => '2021-01-01',
-                    ],
-                    [
-                        'created_at' => '2021-02-01',
-                    ],
-                    [
-                        'created_at' => '2021-03-01',
-                    ],
-                    [
-                        'created_at' => '2021-04-01',
-                    ],
-                    [
-                        'created_at' => '2021-05-01',
-                    ],
-
-                ],
-                'hasError' => true,
-                'paginationToken' => null,
                 'createdAt' => null,
             ],
             'created_at is null case' => [
@@ -336,7 +299,6 @@ class TwitterApiManagerTest extends TestCase
                     ]
 
                 ],
-                'hasError' => false,
                 'paginationToken' => null,
                 'createdAt' => null,
                 'expected' => '',
@@ -361,9 +323,8 @@ class TwitterApiManagerTest extends TestCase
                     ],
 
                 ],
-                'hasError' => false,
                 'paginationToken' => null,
-                'createdAt' => '2021-03-01',
+                'createdAt' => new Colmun('created_at', '2021-03-01'),
             ]
         ];
     }
@@ -437,7 +398,7 @@ class TwitterApiManagerTest extends TestCase
                 ]
             ],
             'filter slice case' => [
-                'createdAt' => '2021-03-01',
+                'createdAt' => new Colmun('created_at', '2021-03-01'),
                 'responseData' => collect([
                     [
                         'created_at' => '2021-01-01',
@@ -470,7 +431,7 @@ class TwitterApiManagerTest extends TestCase
                 ]
             ],
             'not slice case' => [
-                'createdAt' => '2020-12-01',
+                'createdAt' => new Colmun('created_at', '2020-12-01'),
                 'responseData' => collect([
                     [
                         'created_at' => '2021-01-01',

@@ -5,6 +5,7 @@ namespace Unit\Application\InputData;
 use App\Adapters\TargetDateAdapter;
 use App\Application\InputData\BigQueryRiskWordSql;
 use App\Application\InputData\TargetDate;
+use App\Entities\BigQuery\Colmun;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
 use \Mockery;
@@ -18,7 +19,7 @@ class BigQueryRiskWordSqlTest extends TestCase
      *
      * @return void
      */
-    public function getSql(Collection $riskwords, $createdAt, array $expected): void
+    public function getSql(Collection $riskwords, ?Colmun $createdAt, array $expected): void
     {
         $projectId = '';
         $datasetId = '';
@@ -26,6 +27,7 @@ class BigQueryRiskWordSqlTest extends TestCase
         $riskManageTable = '';
         $appName = '';
         $language = '';
+        $targetField = 'text';
 
         $model = new BigQueryRiskWordSql(
             $projectId,
@@ -35,6 +37,7 @@ class BigQueryRiskWordSqlTest extends TestCase
             $riskwords,
             $appName,
             $language,
+            $targetField,
             $createdAt
         );
 
@@ -93,7 +96,7 @@ class BigQueryRiskWordSqlTest extends TestCase
             ],
             'createdAt is not null case' => [
                 'riskwords' => collect([]),
-                'createdAt' => '2021-01-01',
+                'createdAt' => new Colmun('date', '2021-01-01'),
                 'expected' => [
                     'riskClause' => '',
                     'createdAtClause' => 'AND date >= ?'
@@ -112,7 +115,7 @@ class BigQueryRiskWordSqlTest extends TestCase
      * @param  mixed $expected
      * @return void
      */
-    public function getParameters(Collection $riskwords, $createdAt, array $expected): void
+    public function getParameters(Collection $riskwords, ?Colmun $createdAt, array $expected): void
     {
         $projectId = '';
         $datasetId = '';
@@ -120,6 +123,7 @@ class BigQueryRiskWordSqlTest extends TestCase
         $riskManageTable = '';
         $appName = '';
         $language = '';
+        $targetField = 'message';
 
         $model = new BigQueryRiskWordSql(
             $projectId,
@@ -129,6 +133,7 @@ class BigQueryRiskWordSqlTest extends TestCase
             $riskwords,
             $appName,
             $language,
+            $targetField,
             $createdAt
         );
 
@@ -146,7 +151,7 @@ class BigQueryRiskWordSqlTest extends TestCase
             ],
             'riskword count 0 and createdAt not null case' => [
                 'reskword' => collect([]),
-                'createdAt' => '2021-01-01',
+                'createdAt' => new Colmun('date', '2021-01-01'),
                 'expected' => [
                     '2021-01-01',
                 ],
@@ -165,7 +170,7 @@ class BigQueryRiskWordSqlTest extends TestCase
                 'reskword' => collect([
                     ['word' => 'test']
                 ]),
-                'createdAt' => '2021-01-01',
+                'createdAt' => new Colmun('date', '2021-01-01'),
                 'expected' => [
                     'test',
                     '2021-01-01',
@@ -184,7 +189,7 @@ class BigQueryRiskWordSqlTest extends TestCase
      * @param  bool $expected
      * @return void
      */
-    public function hasParameters(Collection $riskwords, $createdAt, bool $expected): void
+    public function hasParameters(Collection $riskwords, ?Colmun $createdAt, bool $expected): void
     {
         $projectId = '';
         $datasetId = '';
@@ -192,6 +197,7 @@ class BigQueryRiskWordSqlTest extends TestCase
         $riskManageTable = '';
         $appName = '';
         $language = '';
+        $targetField = 'message';
 
         $model = new BigQueryRiskWordSql(
             $projectId,
@@ -201,6 +207,7 @@ class BigQueryRiskWordSqlTest extends TestCase
             $riskwords,
             $appName,
             $language,
+            $targetField,
             $createdAt
         );
 
@@ -218,7 +225,7 @@ class BigQueryRiskWordSqlTest extends TestCase
             ],
             'riskword count 0 and createdAt not null case' => [
                 'reskword' => collect([]),
-                'createdAt' => '2021-01-01',
+                'createdAt' => new Colmun('date', '2021-01-01'),
                 'expected' => true,
 
             ],
@@ -233,7 +240,7 @@ class BigQueryRiskWordSqlTest extends TestCase
                 'reskword' => collect([
                     ['word' => 'test']
                 ]),
-                'createdAt' => '2021-01-01',
+                'createdAt' => new Colmun('date', '2021-01-01'),
                 'expected' => true,
             ],
         ];

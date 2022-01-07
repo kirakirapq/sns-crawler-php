@@ -1,10 +1,10 @@
 <?php
 
-namespace Unit\Adapters;
+namespace Unit\Application\Interactors\Notification;
 
 use App\Application\Interactors\Notification\SlackNotificationManager;
 use App\Application\Repositories\Notification\NotificationClient;
-use App\Application\OutputData\InnerApiResponse\NotificationResponseModel;
+use App\Entities\Notification\NotificationResponseModel;
 use App\Entities\RiskWord\RiskCommentList;
 use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
@@ -32,7 +32,7 @@ class SlackNotificationManagerTest extends TestCase
             ],
         ];
 
-        $responseModel = Mockery::mock(NotificationResponseModel::class);
+        $responseModel = new NotificationResponseModel([]);
 
         $client = Mockery::mock(NotificationClient::class)
             ->shouldReceive(
@@ -71,7 +71,7 @@ class SlackNotificationManagerTest extends TestCase
             'no message'
         );
 
-        $responseModel = Mockery::mock(NotificationResponseModel::class);
+        $responseModel = new NotificationResponseModel([]);
 
         Mockery::mock('alias:' . Config::class)
             ->shouldReceive(['get' => ''])
@@ -89,5 +89,7 @@ class SlackNotificationManagerTest extends TestCase
 
         $manager = new SlackNotificationManager($client);
         $actual = $manager->notifyRiskCommentList($riskComment);
+
+        $this->assertEquals($responseModel, $actual);
     }
 }

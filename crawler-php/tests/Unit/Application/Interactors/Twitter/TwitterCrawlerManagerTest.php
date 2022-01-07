@@ -2,9 +2,9 @@
 
 namespace Unit\Application\Interactors\Twitter;
 
-use App\Adapters\TranslationRequestDataApiAdapter;
-use App\Application\InputData\TranslationRequestData;
+use App\Adapters\OuterApiResponseAdapter;
 use App\Application\Interactors\Twitter\TwitterCrawlerManager;
+use App\Application\OutputData\OuterApiResponse\OuterApiResponse;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Csv\CsvUseCase;
 use App\Application\UseCases\Notification\NotificationUseCase;
@@ -13,6 +13,9 @@ use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Twitter\TwitterApiUseCase;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;
+use App\Exceptions\ErrorDefinitions\ErrorDefinition;
+use App\Exceptions\ErrorDefinitions\LayerCode;
+use App\Exceptions\OuterErrorException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
@@ -27,22 +30,20 @@ class TwitterCrawlerManagerTest extends TestCase
      * invokeCrawling
      * @test
      * @dataProvider invokeCrawlingDataProvider
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      *
      * @param  mixed $count
      * @param  mixed $expected
      * @return void
      */
-    public function invokeCrawling(int $count, array $expected): void
+    public function invokeCrawling(bool $hasError, int $count,  ?OuterApiResponse $expected): void
     {
         Mockery::mock('alias:' . Config::class)
             ->shouldReceive('set')
             ->shouldReceive(['get' => '']);
 
         Log::shouldReceive('info');
-
-        $response = new TranslationRequestData('text', 'en', 'ja');
-        $adapter = Mockery::mock('alias:' . TranslationRequestDataApiAdapter::class);
-        $adapter->shouldReceive('getTranslationRequestData')->andReturn($response);
 
         $collect = collect([]);
         for ($i = 0; $i < $count; $i++) {
@@ -53,13 +54,22 @@ class TwitterCrawlerManagerTest extends TestCase
         }
 
         $twitterApiUseCase = Mockery::mock(TwitterApiUseCase::class);
-        $twitterApiUseCase->shouldReceive('getLatestData')->andReturn(null);
-        $twitterApiUseCase->shouldReceive('getTwitterMentionList')
-            ->andReturn($collect);
+
+        if ($hasError === true) {
+            Log::shouldReceive('error');
+            $ed = new ErrorDefinition(LayerCode::REPOSITORY_LAYER_CODE, 500);
+            $exception = new OuterErrorException($ed, '');
+            $twitterApiUseCase->shouldReceive('getLatestData')->andThrow($exception);
+            $expected = OuterApiResponseAdapter::getFromOuterErrorException($exception);
+        } else {
+            $twitterApiUseCase->shouldReceive('getLatestData')->andReturn(null);
+            $twitterApiUseCase->shouldReceive('getTwitterMentionList')
+                ->andReturn($collect);
+        }
 
         $translationUseCase = Mockery::mock(TranslationUseCase::class);
         $translationUseCase->shouldReceive('translationlist')->andReturn(
-            new TranslationDataList(collect([]), collect([]))
+            TranslationDataList::getInstance(collect([]), collect([]))
         );
 
         $csvUseCase = Mockery::mock(CsvUseCase::class);
@@ -99,12 +109,30 @@ class TwitterCrawlerManagerTest extends TestCase
     {
         return [
             'mentionDataList count 0 case' => [
+                'hasError' => false,
                 'count' => 0,
-                'expected' => ['resultCount' => 0],
+                'expected' => OuterApiResponseAdapter::getFromArray(
+                    [
+                        'new mention list is not found.'
+                    ],
+                    200
+                ),
             ],
             'mentionDataList count not 0 case' => [
+                'hasError' => false,
                 'count' => 10,
-                'expected' => ['resultCount' => 10],
+                'expected' => OuterApiResponseAdapter::getFromArray(
+                    [
+                        'TwitterCommentDataList' => [],
+                        'RiskCommentList' => [],
+                    ],
+                    200
+                ),
+            ],
+            'hasError true case' => [
+                'hasError' => true,
+                'count' => 10,
+                'expected' => null,
             ],
         ];
     }

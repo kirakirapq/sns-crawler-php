@@ -4,13 +4,8 @@ namespace App\Application\OutputData\OuterApiResponse;
 
 class ApiResponse implements OuterApiResponse
 {
-    private array $message;
-    private int $code;
-
-    public function __construct(array $message, int $code)
+    public function __construct(private array $message, private int $code)
     {
-        $this->message = $message;
-        $this->code    = $code;
     }
 
     /**

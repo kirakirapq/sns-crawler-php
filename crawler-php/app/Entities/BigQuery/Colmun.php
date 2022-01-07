@@ -7,11 +7,7 @@ use \ReflectionClass;
 
 final class Colmun
 {
-    private string $name;
-    private mixed $value;
-    private ?string $type;
-
-    public function __construct(string $name, mixed $value, ?string $type = null)
+    public function __construct(private string $name, private int|string|array $value, ?string $type = null)
     {
         if (is_null($type) === false) {
             $type = mb_strtoupper($type);
@@ -21,8 +17,6 @@ final class Colmun
             }
         }
 
-        $this->name = $name;
-        $this->value = $value;
         $this->type = $type;
     }
 
@@ -51,7 +45,7 @@ final class Colmun
      *
      * @return string
      */
-    public function getType(): string
+    public function getType(): ?string
     {
         return $this->type;
     }

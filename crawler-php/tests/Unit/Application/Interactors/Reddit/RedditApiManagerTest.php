@@ -6,6 +6,8 @@ use App\Application\Interactors\Reddit\RedditApiManager;
 use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use App\Application\Repositories\RedditApiRepository;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
+use App\Entities\BigQuery\Colmun;
+use App\Entities\BigQuery\LatestData;
 use App\Entities\ResponseData\Bigquery\BigQueryData;
 use App\Entities\Reddit\SubReddit;
 use App\Entities\Reddit\Thread;
@@ -20,7 +22,7 @@ class RedditApiManagerTest extends TestCase
 {
     /**
      * getLatestData
-     * @tes
+     * @test
      * @dataProvider getLatestDataProvider
      *
      * @param  mixed $existsTable
@@ -31,7 +33,7 @@ class RedditApiManagerTest extends TestCase
      * @param  mixed $expected
      * @return void
      */
-    public function getLatestData(bool $existsTable, ?array $getData, bool $hasError, int $count, array $first, ?string $expected): void
+    public function getLatestData(bool $existsTable, ?array $getData, bool $hasError, int $count, ?Collection $first, ?LatestData $expected): void
     {
         $response = Mockery::mock(BigQueryData::class);
 
@@ -44,7 +46,7 @@ class RedditApiManagerTest extends TestCase
                 [
                     'hasError',
                     'getDataList->count',
-                    'getDataList->first',
+                    'getDataList',
                     'getErrorMessage',
                 ]
             )->never();
@@ -61,16 +63,17 @@ class RedditApiManagerTest extends TestCase
                     [
                         'hasError',
                         'getDataList->count',
-                        'getDataList->first',
+                        'getDataList',
                         'getErrorMessage',
                     ]
                 )->never();
             } elseif ($hasError === true) {
+                Log::shouldReceive('error');
                 $response->shouldReceive(['hasError' => $hasError, 'getErrorMessage' => ''])->once();
                 $response->shouldReceive(
                     [
                         'getDataList->count',
-                        'getDataList->first',
+                        'getDataList',
                     ]
                 )->never();
             } elseif ($count === 0) {
@@ -85,10 +88,10 @@ class RedditApiManagerTest extends TestCase
                 $response->shouldReceive(
                     [
                         'hasError' => $hasError,
-                        'getDataList->count' => $count,
-                        'getDataList->first' => $first,
+                        'getDataList' => $first,
                     ]
-                )->once();
+                );
+                // ->once();
                 $response->shouldReceive(['getErrorMessage'])->never();
             }
         }
@@ -126,9 +129,7 @@ class RedditApiManagerTest extends TestCase
                 'getData' => [],
                 'hasError' => false,
                 'count' => 1,
-                'first' => [
-                    'created_at' => 'yyyy-mm-dd hh:ii:ss'
-                ],
+                'first' => collect([['created_at' => 'yyyy-mm-dd hh:ii:ss']]),
                 'expected' => null,
             ],
             'getData is null case' => [
@@ -136,9 +137,7 @@ class RedditApiManagerTest extends TestCase
                 'getData' => null,
                 'hasError' => false,
                 'count' => 1,
-                'first' => [
-                    'created_at' => 'yyyy-mm-dd hh:ii:ss'
-                ],
+                'first' => collect([['created_at' => 'yyyy-mm-dd hh:ii:ss']]),
                 'expected' => null,
             ],
             'response hasError is true case' => [
@@ -146,9 +145,7 @@ class RedditApiManagerTest extends TestCase
                 'getData' => [],
                 'hasError' => true,
                 'count' => 1,
-                'first' => [
-                    'created_at' => 'yyyy-mm-dd hh:ii:ss'
-                ],
+                'first' => collect([['created_at' => 'yyyy-mm-dd hh:ii:ss']]),
                 'expected' => null,
             ],
             'response getDataList count is 0 case' => [
@@ -156,9 +153,7 @@ class RedditApiManagerTest extends TestCase
                 'getData' => [],
                 'hasError' => false,
                 'count' => 0,
-                'first' => [
-                    'created_at' => 'yyyy-mm-dd hh:ii:ss'
-                ],
+                'first' => collect([['created_at' => 'yyyy-mm-dd hh:ii:ss']]),
                 'expected' => null,
             ],
             'response getDataList created_at is undefined case' => [
@@ -168,8 +163,8 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'hasError' => false,
                 'count' => 1,
-                'first' => [],
-                'expected' => null,
+                'first' => collect([['id' => 'id-xxxx']]),
+                'expected' => new LatestData('', ['id' => new Colmun('id', 'id-xxxx')]),
             ],
             'normal case' => [
                 'existsTable' => true,
@@ -180,17 +175,25 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'hasError' => false,
                 'count' => 1,
-                'first' => [
+                'first' => collect([[
+                    'id' => 'id-xxxx',
                     'created_at' => 'yyyy-mm-dd hh:ii:ss'
-                ],
-                'expected' => 'yyyy-mm-dd hh:ii:ss',
+                ]]),
+                'expected' =>
+                new LatestData(
+                    '',
+                    [
+                        'id' => new Colmun('id', 'id-xxxx'),
+                        'created_at' => new Colmun('created_at', 'yyyy-mm-dd hh:ii:ss')
+                    ]
+                ),
             ],
         ];
     }
 
     /**
      * getThreadList
-     * @tes
+     * @test
      * @dataProvider getThreadListDataProvider
      *
      * @param  bool $hasError
@@ -205,25 +208,7 @@ class RedditApiManagerTest extends TestCase
             Log::shouldReceive('error');
         }
 
-        $apiResponse = Mockery::mock(InnerApiResponse::class);
-        $apiResponse->shouldReceive(
-            [
-                'getStatusCode' => 200,
-                'hasError' => $hasError,
-                'getBodyAsArray' => $apiResponseData,
-            ]
-        )
-            ->once();
-        if ($hasError === true) {
-            $apiResponse->shouldReceive(
-                [
-                    'getBody' => '',
-                ]
-            )
-                ->once();
-        }
-
-        $subReddit = new SubReddit($apiResponse);
+        $subReddit = new SubReddit($apiResponseData);
 
         $repository = Mockery::mock(RedditApiRepository::class);
         $repository->shouldReceive(
@@ -243,24 +228,6 @@ class RedditApiManagerTest extends TestCase
     public function getThreadListDataProvider(): array
     {
         return [
-            'has error true case' => [
-                'hasError' => true,
-                'apiResponseData' => [
-                    'data' => [
-                        'children' => [
-                            [
-                                'data' => [
-                                    'subreddit' => 'page name',
-                                    'title' => 'thread title',
-                                    'selftext' => 'text',
-                                    'permalink' => '/testdata'
-                                ]
-                            ]
-                        ]
-                    ]
-                ],
-                'expected' => null
-            ],
             'threadList count 0 case' => [
                 'hasError' => false,
                 [
@@ -314,11 +281,11 @@ class RedditApiManagerTest extends TestCase
      * @param  mixed $expectedArray
      * @return void
      */
-    public function getCommentList(?string $createdAt, array $responseThreadArray, $expectedArray): void
+    public function getCommentList(?Colmun $createdAt, array $responseThreadArray, $expectedArray): void
     {
         $expected = collect($expectedArray);
 
-        Log::shouldReceive('debug');
+        Log::shouldReceive('debug', 'info');
 
         $requestThread = new Thread('title', 'text', 'url');
         $requestThreadList = collect([$requestThread]);
@@ -347,12 +314,100 @@ class RedditApiManagerTest extends TestCase
         $older = Carbon::parse('2019-12-01', 'Asia/Tokyo');
 
         return [
+            'createdAt is null and duplicat id and test empty case' => [
+                'createdAt' => null,
+                'responseThreadArray' => [
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => '',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => '',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                ],
+                'expectedArray' => [],
+            ],
+            'createdAt is null and duplicat id and test empty or undefind body case' => [
+                'createdAt' => null,
+                'responseThreadArray' => [
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => '',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                ],
+                'expectedArray' => [],
+            ],
+            'createdAt is null and duplicat id case' => [
+                'createdAt' => null,
+                'responseThreadArray' => [
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => 'text1',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => 'text2',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                ],
+                'expectedArray' => [
+                    [
+                        'id' => 'id-1',
+                        'parent_id' => 'parent_id',
+                        'subreddit' => 'subreddit',
+                        'text' => 'text1',
+                        'permalink' => '/hoge',
+                        'created_at' => $created->format('Y-m-d H:i:s'),
+                        'created' => $created->getTimestamp(),
+                        'date' => $created->format('Y-m-d'),
+                    ],
+                ],
+            ],
             'createdAt is null and filter by key name case' => [
                 'createdAt' => null,
                 'responseThreadArray' => [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'permalink' => '/hoge',
@@ -361,7 +416,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-2',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text',
@@ -372,7 +427,7 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-2',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text',
@@ -389,7 +444,7 @@ class RedditApiManagerTest extends TestCase
                 [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => '',
@@ -399,7 +454,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-2',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text',
@@ -410,7 +465,7 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-2',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text',
@@ -427,7 +482,7 @@ class RedditApiManagerTest extends TestCase
                 [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'permalink' => '/hoge',
@@ -436,7 +491,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-2',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => '',
@@ -446,7 +501,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-3',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text',
@@ -457,7 +512,7 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-3',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text',
@@ -474,7 +529,7 @@ class RedditApiManagerTest extends TestCase
                 [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text1',
@@ -484,7 +539,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-2',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text2',
@@ -495,7 +550,7 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-1',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text1',
@@ -505,7 +560,7 @@ class RedditApiManagerTest extends TestCase
                         'date' => $created->format('Y-m-d'),
                     ],
                     [
-                        'id' => 'id',
+                        'id' => 'id-2',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text2',
@@ -516,13 +571,13 @@ class RedditApiManagerTest extends TestCase
                     ],
                 ],
             ],
-            'createdAt is not null and not filter data case' => [
-                'createdAt' => '2020-01-01',
+            'createdAt is not null and duplicate id case' => [
+                'createdAt' => new Colmun('created', $older->getTimestamp()),
                 'responseThreadArray' =>
                 [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text1',
@@ -532,7 +587,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text2',
@@ -543,7 +598,45 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-1',
+                        'parent_id' => 'parent_id',
+                        'subreddit' => 'subreddit',
+                        'text' => 'text1',
+                        'permalink' => '/hoge',
+                        'created_at' => $created->format('Y-m-d H:i:s'),
+                        'created' => $created->getTimestamp(),
+                        'date' => $created->format('Y-m-d'),
+                    ],
+                ],
+            ],
+            'createdAt is not null and not filter data case' => [
+                'createdAt' => new Colmun('created', $older->getTimestamp()),
+                'responseThreadArray' =>
+                [
+                    [
+                        'data' => [
+                            'id' => 'id-1',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => 'text1',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                    [
+                        'data' => [
+                            'id' => 'id-2',
+                            'parent_id' => 'parent_id',
+                            'subreddit' => 'subreddit',
+                            'body' => 'text2',
+                            'permalink' => '/hoge',
+                            'created' => $created->getTimestamp(),
+                        ],
+                    ],
+                ],
+                'expectedArray' => [
+                    [
+                        'id' => 'id-1',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text1',
@@ -553,7 +646,7 @@ class RedditApiManagerTest extends TestCase
                         'date' => $created->format('Y-m-d'),
                     ],
                     [
-                        'id' => 'id',
+                        'id' => 'id-2',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text2',
@@ -566,7 +659,7 @@ class RedditApiManagerTest extends TestCase
             ],
 
             'createdAt is not null and filter by text key case' => [
-                'createdAt' => '2020-01-01',
+                'createdAt' => new Colmun('created', '2020-01-01'),
                 'responseThreadArray' =>
                 [
                     [
@@ -603,12 +696,12 @@ class RedditApiManagerTest extends TestCase
                 ],
             ],
             'createdAt is not null and filter by empty text case' => [
-                'createdAt' => '2020-01-01',
+                'createdAt' => new Colmun('created', '2020-01-01'),
                 'responseThreadArray' =>
                 [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => '',
@@ -618,7 +711,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-2',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text2',
@@ -629,7 +722,7 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-2',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text2',
@@ -641,12 +734,12 @@ class RedditApiManagerTest extends TestCase
                 ],
             ],
             'createdAt is not null and filter by created_at case' => [
-                'createdAt' => '2020-01-01',
+                'createdAt' => new Colmun('created', '2020-01-01'),
                 'responseThreadArray' =>
                 [
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-1',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => '',
@@ -656,7 +749,7 @@ class RedditApiManagerTest extends TestCase
                     ],
                     [
                         'data' => [
-                            'id' => 'id',
+                            'id' => 'id-2',
                             'parent_id' => 'parent_id',
                             'subreddit' => 'subreddit',
                             'body' => 'text2',
@@ -667,7 +760,7 @@ class RedditApiManagerTest extends TestCase
                 ],
                 'expectedArray' => [
                     [
-                        'id' => 'id',
+                        'id' => 'id-2',
                         'parent_id' => 'parent_id',
                         'subreddit' => 'subreddit',
                         'text' => 'text2',

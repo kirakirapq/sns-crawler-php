@@ -2,17 +2,21 @@
 
 namespace Unit\Application\Interactors\Reddit;
 
-use App\Adapters\TranslationRequestDataApiAdapter;
-use App\Application\InputData\TranslationRequestData;
+use App\Adapters\OuterApiResponseAdapter;
 use App\Application\Interactors\Reddit\RedditCrawlerManager;
+use App\Application\OutputData\OuterApiResponse\OuterApiResponse;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Csv\CsvUseCase;
 use App\Application\UseCases\Notification\NotificationUseCase;
 use App\Application\UseCases\RiskWord\RiskWordUseCase;
 use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Reddit\RedditApiUseCase;
+use App\Entities\Notification\NotificationResponseModel;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;
+use App\Exceptions\ErrorDefinitions\ErrorDefinition;
+use App\Exceptions\ErrorDefinitions\LayerCode;
+use App\Exceptions\OuterErrorException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
@@ -27,19 +31,21 @@ class RedditCrawlerManagerTest extends TestCase
      * invokeCrawling
      * @test
      * @dataProvider invokeCrawlingDataProvider
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
      *
      * @param  mixed $count
      * @param  mixed $expected
      * @return void
      */
-    public function invokeCrawling(?array $threadListArray, array $commentListArray, RiskCommentList $riskCommentList, ?array $expected): void
+    public function invokeCrawling(bool $isError, ?array $threadListArray, array $commentListArray, RiskCommentList $riskCommentList, ?OuterApiResponse $expected): void
     {
         Mockery::mock('alias:' . Config::class)
             ->shouldReceive('set')
             ->shouldReceive(['get' => '']);
 
         Log::shouldReceive('info');
-
+        $e = null;
         $threadList = null;
         if (is_null($threadListArray) === false) {
             $threadList = collect($threadListArray);
@@ -47,32 +53,39 @@ class RedditCrawlerManagerTest extends TestCase
         $commentList = collect($commentListArray);
 
         $redditApiUseCase = Mockery::mock(RedditApiUseCase::class);
-        $redditApiUseCase->shouldReceive('getLatestData')->andReturn(null);
-        $redditApiUseCase->shouldReceive('getThreadList')
-            ->andReturn($threadList);
-        $redditApiUseCase->shouldReceive('getCommentList')
-            ->andReturn($commentList);
 
-        $adapter = Mockery::mock('alias:' . TranslationRequestDataApiAdapter::class);
+        if ($isError === true) {
+            Log::shouldReceive('error');
+            $ed = new ErrorDefinition(LayerCode::REPOSITORY_LAYER_CODE, 500);
+            $e = new OuterErrorException($ed, 'error test');
+            $redditApiUseCase->shouldReceive('getLatestData')->andThrow($e);
+        } else {
+            $redditApiUseCase->shouldReceive('getLatestData')->andReturn(null);
+            $redditApiUseCase->shouldReceive('getThreadList')
+                ->andReturn($threadList);
+            $redditApiUseCase->shouldReceive('getCommentList')
+                ->andReturn($commentList);
+        }
+
         $translationUseCase = Mockery::mock(TranslationUseCase::class);
         $csvUseCase = Mockery::mock(CsvUseCase::class);
         $riskWordUseCase = Mockery::mock(RiskWordUseCase::class);
 
         if (count($commentListArray) === 0) {
-            $adapter->shouldReceive('getTranslationRequestData')->never();
             $translationUseCase->shouldReceive('translationlist')->never();
             $csvUseCase->shouldReceive([
                 'loadCsv' => 'filename',
                 'deleteFile' => 'filename',
             ])->never();
+            $riskWordUseCase->shouldReceive(
+                [
+                    'loadRiskComment' => '',
+                    'getRiskComment' => $riskCommentList
+                ]
+            )->never();
         } else {
-            $response = new TranslationRequestData('text', 'en', 'ja');
-            $adapter->shouldReceive('getTranslationRequestData')
-                ->andReturn($response)
-                ->once();
-
             $translationUseCase->shouldReceive('translationlist')->andReturn(
-                new TranslationDataList(collect([]), collect([]))
+                TranslationDataList::getInstance(collect([]), collect([]))
             )->once();
 
             $csvUseCase->shouldReceive([
@@ -86,27 +99,35 @@ class RedditCrawlerManagerTest extends TestCase
                     'getRiskComment' => $riskCommentList
                 ]
             )->once();
+        }
 
-            $notificationUseCase = Mockery::mock(NotificationUseCase::class);
-            if ($riskCommentList->getCommentList()->count() === 0) {
-                $notificationUseCase->shouldReceive('notifyRiskCommentList')->never();
-            } else {
-                $notificationUseCase->shouldReceive('notifyRiskCommentList')->once();
-            }
 
-            $bigQueryUseCase = Mockery::mock(BigQueryUseCase::class);
-            $bigQueryUseCase->shouldReceive('loadBigQuery');
+        $notificationUseCase = Mockery::mock(NotificationUseCase::class);
+        if ($riskCommentList->getCommentList()->count() === 0) {
+            $notificationUseCase->shouldReceive('notifyRiskCommentList')->never();
+        } else {
+            $notificationUseCase->shouldReceive(
+                ['notifyRiskCommentList' => new NotificationResponseModel([])]
+            )->once();
+        }
 
-            $manager = new RedditCrawlerManager(
-                $bigQueryUseCase,
-                $redditApiUseCase,
-                $translationUseCase,
-                $csvUseCase,
-                $riskWordUseCase,
-                $notificationUseCase
-            );
-            $actual  = $manager->invokeCrawling('reddit', 'kms', 'en');
+        $bigQueryUseCase = Mockery::mock(BigQueryUseCase::class);
+        $bigQueryUseCase->shouldReceive('loadBigQuery');
 
+
+        $manager = new RedditCrawlerManager(
+            $bigQueryUseCase,
+            $redditApiUseCase,
+            $translationUseCase,
+            $csvUseCase,
+            $riskWordUseCase,
+            $notificationUseCase
+        );
+        $actual  = $manager->invokeCrawling('reddit', 'kms', 'en');
+
+        if ($isError === true) {
+            $this->assertEquals(OuterApiResponseAdapter::getFromOuterErrorException($e), $actual);
+        } else {
             $this->assertEquals($expected, $actual);
         }
     }
@@ -127,13 +148,32 @@ class RedditCrawlerManagerTest extends TestCase
         ];
 
         return [
-            'threadList is null case' => [
+            'eeror case' => [
+                'isError' => true,
                 'threadListArray' => null,
                 'commentListArray' => [],
                 'riskCommentList' => (new RiskCommentList(200, collect([]))),
-                'expected' => null,
+                'expected' => OuterApiResponseAdapter::getFromArray(
+                    [
+                        'thread list is not found.'
+                    ],
+                    200
+                ),
+            ],
+            'threadList is null case' => [
+                'isError' => false,
+                'threadListArray' => null,
+                'commentListArray' => [],
+                'riskCommentList' => (new RiskCommentList(200, collect([]))),
+                'expected' => OuterApiResponseAdapter::getFromArray(
+                    [
+                        'thread list is not found.'
+                    ],
+                    200
+                ),
             ],
             'commentList count 0 case' => [
+                'isError' => false,
                 'threadListArray' => [
                     [
                         'text' => '',
@@ -142,34 +182,43 @@ class RedditCrawlerManagerTest extends TestCase
                 ],
                 'commentListArray' => [],
                 'riskCommentList' => (new RiskCommentList(200, collect([]))),
-                'expected' => null,
+                'expected' => OuterApiResponseAdapter::getFromArray(
+                    [
+                        'new comment list is not found.'
+                    ],
+                    200
+                ),
             ],
             'RiskCommentList count 0 case' => [
+                'isError' => false,
                 'threadListArray' => [
                     [
                         'text' => '',
                         'id' => '',
                     ]
                 ],
-                'commentListArray' => [
-                    [
-                        'text' => '',
-                        'id' => '',
-                    ]
-                ],
+                'commentListArray' => $commentData,
                 'riskCommentList' => (new RiskCommentList(200, collect([[]]))),
-                'expected' => ['resultCount' => count([
+                'expected'  => OuterApiResponseAdapter::getFromArray(
                     [
-                        'text' => '',
-                        'id' => '',
-                    ]
-                ])],
+                        'RedditCommentDataList' => [],
+                        'RiskCommentList' => [],
+                    ],
+                    200
+                ),
             ],
             'normal case' => [
+                'isError' => false,
                 'threadListArray' => $commentData,
                 'commentListArray' => $commentData,
                 'riskCommentList' => (new RiskCommentList(200, collect($commentData))),
-                'expected' => ['resultCount' => count($commentData)],
+                'expected'  => OuterApiResponseAdapter::getFromArray(
+                    [
+                        'RedditCommentDataList' => [],
+                        'RiskCommentList' => $commentData,
+                    ],
+                    200
+                ),
             ],
         ];
     }

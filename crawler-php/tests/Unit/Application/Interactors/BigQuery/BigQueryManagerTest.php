@@ -1,19 +1,21 @@
 <?php
 
-namespace Unit\Adapters;
+namespace Unit\Application\Interactors\BigQuery;
 
 use App\Adapters\BigQueryResponseAdapter;
 use App\Application\InputData\BigQuerySqlModel;
 use App\Application\InputData\BigQueryRiskWordSql;
 use App\Application\Interactors\BigQuery\BigQueryManager;
 use App\Application\OutputData\InnerApiResponse\BigQueryResponse;
-// use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
+use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use App\Application\Repositories\BigQuery\BigQueryRepository;
 use App\Entities\ResponseData\Bigquery\BigQueryData;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 use \Mockery;
+use stdClass;
+use Google\Cloud\BigQuery\QueryResults;
 
 class BigQueryManagerTest extends TestCase
 {
@@ -61,25 +63,49 @@ class BigQueryManagerTest extends TestCase
      *
      * @return void
      */
-    public function getData($hasError, $getBodyCount, $getBigqueryDataCount): void
+    public function getData($hasError): void
     {
         $sqlModel = Mockery::mock(BigQuerySqlModel::class);
 
-        $bigQueryResponse = Mockery::mock(BigQueryResponse::class);
-        $bigQueryResponse->shouldReceive('hasError')->andReturn($hasError)->once();
-        $bigQueryResponse->shouldReceive('getBody')->times($getBodyCount);
+
+        if ($hasError === true) {
+            Log::shouldReceive('error');
+
+            $bigQueryResponse = new BigQueryResponse(
+                500,
+                new class($hasError)
+                {
+                    public function hasError()
+                    {
+                        return $hasError;
+                    }
+
+                    public function getBody()
+                    {
+                        return '';
+                    }
+                }
+            );
+        } else {
+            $mock = Mockery::mock(QueryResults::class)->shouldReceive(
+                [
+                    'rows' => [],
+                    'identity' => 'xxx',
+                ]
+            )->getMock();
+            $bigQueryResponse = Mockery::mock(InnerApiResponse::class)
+                ->shouldReceive(
+                    [
+                        'hasError' => $hasError,
+                        'getStatusCode' => 200,
+                        'getBody' => $mock
+                    ]
+                )
+                ->getMock();
+        }
 
         $bigQueryRepository = Mockery::mock(BigQueryRepository::class);
         $bigQueryRepository->shouldReceive('getData')->andReturn($bigQueryResponse)->once();
-
-        Mockery::mock('alias:' . BigQueryResponseAdapter::class)
-            ->shouldReceive('getBigqueryData')
-            ->andReturn(Mockery::mock(BigQueryData::class))
-            ->times($getBigqueryDataCount);
-
-        if ($hasError === true) {
-            Log::shouldReceive('error')->once();
-        }
 
         $manager = new BigQueryManager($bigQueryRepository);
         $actual = $manager->getData($sqlModel);
@@ -97,13 +123,9 @@ class BigQueryManagerTest extends TestCase
         return [
             'has error case' => [
                 'hasError' => true,
-                'getBodyCount' => 1,
-                'getBigqueryDataCount' => 0,
             ],
             'has not error case' => [
                 'hasError' => false,
-                'getBodyCount' => 0,
-                'getBigqueryDataCount' => 1,
             ]
         ];
     }
@@ -122,7 +144,7 @@ class BigQueryManagerTest extends TestCase
             ->andReturn('twitter', 'dataset', 'table')
             ->times(3);
 
-        $apiResponse = Mockery::mock(BigQueryResponse::class)
+        $apiResponse = Mockery::mock(InnerApiResponse::class)
             ->shouldReceive(
                 [
                     'hasError' => $hasError,
@@ -166,7 +188,7 @@ class BigQueryManagerTest extends TestCase
      */
     public function insertBigQuery($hasError): void
     {
-        $apiResponse = Mockery::mock(BigQueryResponse::class)
+        $apiResponse = Mockery::mock(InnerApiResponse::class)
             ->shouldReceive(
                 [
                     'hasError' => $hasError,
@@ -177,7 +199,7 @@ class BigQueryManagerTest extends TestCase
         $bigQueryRepository = Mockery::mock(BigQueryRepository::class);
         $bigQueryRepository->shouldReceive('insertBigQuery')->andReturn($apiResponse)->once();
 
-        $sqlModel = new BigQueryRiskWordSql('prj', 'db', 'tbl1', 'tbl2', collect([]), 'app', 'lung');
+        $sqlModel = new BigQueryRiskWordSql('prj', 'db', 'tbl1', 'tbl2', collect([]), 'app', 'lung', 'text');
 
         if ($hasError === true) {
             Log::shouldReceive('error')->once();

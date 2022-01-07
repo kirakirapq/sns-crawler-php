@@ -3,6 +3,8 @@
 namespace Unit\Application\InputData;
 
 use App\Application\InputData\TwitterApiRequestData;
+use Illuminate\Support\Facades\Config;
+use Mockery;
 use Tests\TestCase;
 
 class TwitterApiRequestDataTest extends TestCase
@@ -69,13 +71,18 @@ class TwitterApiRequestDataTest extends TestCase
      */
     public function getOptions(): void
     {
+        $token = 'token';
+        Mockery::mock('alias:' . Config::class)
+            ->shouldReceive('get')
+            ->andReturn($token)
+            ->times(1);
 
         $model = new TwitterApiRequestData();
 
         $expected =
             [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $model::BEARER_TOKEN,
+                    'Authorization' => 'Bearer ' . $token,
                     'Accept'        => 'application/json',
                 ]
             ];

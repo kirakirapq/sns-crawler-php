@@ -30,6 +30,7 @@ class BigQueryData
 
         $responsBody = $apiResponse->getBody();
 
+
         $this->setDataList($responsBody->rows());
 
         if ($apiResponse->hasError() === true) {
@@ -44,9 +45,12 @@ class BigQueryData
         }
     }
 
-    protected function setDataList(Iterator $rawData)
+    protected function setDataList(array|Iterator $rawData)
     {
-        $this->addDataList(iterator_to_array($rawData) ?? []);
+        if ($rawData instanceof Iterator) {
+            $rawData = iterator_to_array($rawData);
+        }
+        $this->addDataList($rawData);
     }
 
     /**

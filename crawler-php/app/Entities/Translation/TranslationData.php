@@ -3,19 +3,12 @@
 namespace App\Entities\Translation;
 
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 
 final class TranslationData
 {
     private int $statusCode;
 
-    private $text;
-
-    private ?string $code;
-
-    // private $errorMessage;
-
-    // private bool $hasError;
+    private ?array $text;
 
     public function __construct(int $statusCode, Collection $collection)
     {
@@ -33,47 +26,16 @@ final class TranslationData
         return $this->statusCode;
     }
 
-    // /**
-    //  * hasError
-    //  *
-    //  * @return bool
-    //  */
-    // public function hasError(): bool
-    // {
-    //     return $this->hasError;
-    // }
-
-    // /**
-    //  * getErrorMessage
-    //  *
-    //  * @return void
-    //  */
-    // public function getErrorMessage()
-    // {
-    //     return $this->errorMessage ?? null;
-    // }
-
     public function setData(Collection $collection)
     {
-        foreach ($collection as $key => $value) {
-            if (is_array($value) === true) {
-                foreach ($value as  $v) {
-                    $this->code = $resltData['code'] ?? '';
-                    $this->text[] = $v;
-                }
-            } else {
-                $this->text[] = $collection['text'];
-                $this->code[] = $collection['code'] ?? '';
+        foreach ($collection as $translats) {
+            foreach ($translats as $trans) {
+                $this->text[] = $trans['text'] ?? '';
             }
         }
     }
 
-    public function getCode(): ?string
-    {
-        return $this->code ?? null;
-    }
-
-    public function getText()
+    public function getText(): ?array
     {
         return $this->text ?? null;
     }
