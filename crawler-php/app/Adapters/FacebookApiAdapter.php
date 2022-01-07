@@ -15,7 +15,7 @@ use App\Entities\Facebook\FacebookCommentDataList;
 use App\Exceptions\ObjectDefinitionErrorException;
 use Illuminate\Support\Facades\Config;
 
-class FacebookApiAdapter
+final class FacebookApiAdapter
 {
 
     /**
@@ -47,7 +47,7 @@ class FacebookApiAdapter
     }
 
     /**
-     * getFeedReqestData
+     * getFeedRueqestData
      *
      * @param  mixed $requestType
      * @param  mixed $app
@@ -55,7 +55,7 @@ class FacebookApiAdapter
      * @param  mixed $nextPage
      * @return FacebookRequestData
      */
-    static public function getFeedReqestData(
+    static public function getFeedRueqestData(
         FacebookRequestType $requestType,
         string $app,
         string $language,

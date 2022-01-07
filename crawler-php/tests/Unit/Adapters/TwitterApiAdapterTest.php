@@ -3,10 +3,8 @@
 namespace Unit\Adapters;
 
 use App\Adapters\TwitterApiAdapter;
-use App\Application\OutputData\InnerApiResponse\HttpResponse;
 use App\Entities\Twitter\TwitterMentionDataList;
 use Tests\TestCase;
-use \Mockery;
 
 class TwitterApiAdapterTest extends TestCase
 {
@@ -16,14 +14,14 @@ class TwitterApiAdapterTest extends TestCase
      *
      * @return void
      */
-    public function guzzleResponseToHttpResponse(): void
+    public function responseToMentionDataList(): void
     {
-        $httpResponse = Mockery::mock(HttpResponse::class);
-        $response = Mockery::mock('alias:' . TwitterMentionDataList::class);
-        $response->shouldReceive('getInstance')->andReturn($response);
-
-        $adapter = Mockery::mock('alias:' . HttpResponseAdapter::class);
-        $adapter->shouldReceive('responseToMentionDataList')->andReturn($response);
+        $httpResponse = [
+            'meta' => [],
+            'data' => [
+                ['created_at' => '2021-01-01']
+            ]
+        ];
 
         $actual = TwitterApiAdapter::responseToMentionDataList($httpResponse);
 

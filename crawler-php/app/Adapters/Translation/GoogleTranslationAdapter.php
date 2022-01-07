@@ -4,7 +4,6 @@ namespace App\Adapters\Translation;
 
 use App\Adapters\TranslationDataAdapter;
 use App\Application\InputData\Translation\BCP47;
-use App\Application\OutputData\InnerApiResponse\TranslationResponse;
 use App\Entities\Translation\TranslationDataList;
 use App\Entities\Translation\TranslationData;
 use Illuminate\Support\Collection;
@@ -42,7 +41,7 @@ class GoogleTranslationAdapter
         ];
     }
 
-    static public function getTranlationDataFromV2(array $result): TranslationData
+    static public function getTranlationDataFromArray(array $result): TranslationData
     {
         return new TranslationData(200, collect([$result]));
     }

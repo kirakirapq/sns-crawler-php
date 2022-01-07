@@ -8,14 +8,10 @@ namespace App\Application\OutputData\InnerApiResponse;
  */
 class HttpResponse implements InnerApiResponse
 {
-    private int $statusCode;
-
-    private $body;
-
-    public function __construct(int $statusCode, $body)
-    {
-        $this->statusCode = $statusCode;
-        $this->body = $body;
+    public function __construct(
+        private int $statusCode,
+        private array|bool|int|float|string|object $body
+    ) {
     }
 
     /**
@@ -45,7 +41,16 @@ class HttpResponse implements InnerApiResponse
      */
     public function getBodyAsArray(): array
     {
-        return json_decode($this->body, true) ?? [];
+
+        if (is_array($this->body) === true) {
+            return $this->body;
+        }
+
+        if (($json = json_decode($this->body, true)) !== null) {
+            return $json;
+        }
+
+        return [];
     }
 
     /**

@@ -135,12 +135,7 @@ class RiskCommentListTest extends TestCase
                     [
                         [
                             'id' => 'id123',
-                            'app_name' => '',
-                            'language' => '',
-                            'text' => '',
-                            'translated' => '',
                             'date' => $tokyoDate,
-                            'created_at' => '',
                         ]
                     ],
                 )
@@ -159,11 +154,6 @@ class RiskCommentListTest extends TestCase
                     [
                         [
                             'id' => 'id123',
-                            'app_name' => '',
-                            'language' => '',
-                            'text' => '',
-                            'translated' => '',
-                            'date' => '',
                             'created_at' => $utcCreatedAt,
                         ]
                     ],

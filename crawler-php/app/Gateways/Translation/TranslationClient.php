@@ -84,7 +84,7 @@ final class TranslationClient implements TranslationRepository
                 throw new  OuterErrorException($ed, $e->getMessage());
             }
 
-            return GoogleTranslationAdapter::getTranlationDataFromV2($googleTranslationResponseData);
+            return GoogleTranslationAdapter::getTranlationDataFromArray($googleTranslationResponseData->getResponse());
         }
 
         if ($version == 'V3') {
@@ -122,7 +122,7 @@ final class TranslationClient implements TranslationRepository
                 $translationServiceClient->close();
             }
 
-            return GoogleTranslationAdapter::getTranlationDataFromV3($response);
+            return GoogleTranslationAdapter::getTranlationDataFromArray($googleTranslationResponseData->getResponse());
         }
     }
 

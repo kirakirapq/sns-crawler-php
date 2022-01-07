@@ -1,14 +1,13 @@
 <?php
 
-namespace Unit\Adapters;
+namespace Unit\Application\Interactors\Translation;
 
-use App\Adapters\TranslationRequestDataApiAdapter;
-use App\Application\InputData\TranslationRequestData;
+use App\Adapters\TranslationDataAdapter;
 use App\Application\Interactors\Translation\TranslationManager;
-use App\Application\OutputData\InnerApiResponse\InnerApiResponse;
 use App\Application\Repositories\Translation\TranslationRepository;
-use App\Entities\ResponseData\Translation\TranslationData;
+use App\Entities\Translation\TranslationData;
 use App\Entities\Translation\TranslationDataList;
+use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 use \Mockery;
 
@@ -22,31 +21,37 @@ class TranslationManagerTest extends TestCase
      */
     public function translation(): void
     {
-        $apiResponse     = Mockery::mock(InnerApiResponse::class);
-        $apiResponse->shouldReceive([
-            'getStatusCode' => 200,
-            'hasError' => false,
-            'getBodyAsArray' => [
+        Mockery::mock('alias:' . Config::class)
+            ->shouldReceive('get')
+            ->andReturn('');
+
+        $reqests = [
+            'contents' => [
+                'xxxx',
+                'yyyy'
+            ],
+            'language' => [
+                'from' => 'ja',
+                'to' => 'en'
+            ]
+        ];
+
+        $translated = collect([
+            [
                 'text' => '',
                 'code' => 200,
-            ],
+            ]
         ]);
-        $translationData = new TranslationData($apiResponse);
-        $requestData     = new TranslationRequestData('test', 'from', 'to');
-
-        Mockery::mock('alias:' . TranslationRequestDataApiAdapter::class)
-            ->shouldReceive('getTranslationRequestData')
-            ->andReturn($requestData)
-            ->once();
+        $translationData = new TranslationData(200, $translated);
+        $requestData     = TranslationDataAdapter::getTranslationRequestData($reqests);
 
         $repository = Mockery::mock(TranslationRepository::class)
             ->shouldReceive('translation')
-            ->with($requestData)
             ->andReturn($translationData)
             ->getMock();
 
         $manager = new TranslationManager($repository);
-        $actual = $manager->translation('test', 'from', 'to');
+        $actual = $manager->translation($requestData);
 
         $this->assertEquals($translationData, $actual);
     }
@@ -59,7 +64,7 @@ class TranslationManagerTest extends TestCase
      */
     public function translationlist(): void
     {
-        $translationDataList = new TranslationDataList(collect([]), collect([]));
+        $translationDataList = TranslationDataList::getInstance(collect([]), collect([]));
 
         $urls = collect([]);
         $repository = Mockery::mock(TranslationRepository::class)

@@ -7,7 +7,7 @@ use App\Application\OutputData\OuterApiResponse\OuterApiResponse;
 use App\Exceptions\OuterErrorException;
 use Illuminate\Support\Collection;
 
-class OuterApiResponseAdapter
+final class OuterApiResponseAdapter
 {
     /**
      * getFromOuterErrorException

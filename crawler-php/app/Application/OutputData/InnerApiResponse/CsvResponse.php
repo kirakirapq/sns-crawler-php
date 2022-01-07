@@ -8,14 +8,10 @@ namespace App\Application\OutputData\InnerApiResponse;
  */
 class CsvResponse implements InnerApiResponse
 {
-    private int $statusCode;
-
-    private $body;
-
-    public function __construct(int $statusCode, $body)
-    {
-        $this->statusCode = $statusCode;
-        $this->body = $body;
+    public function __construct(
+        private int $statusCode,
+        private array|bool|int|float|string|object $body
+    ) {
     }
 
     /**
@@ -45,6 +41,14 @@ class CsvResponse implements InnerApiResponse
      */
     public function getBodyAsArray(): array
     {
+        if (is_array($this->body) === true) {
+            return $this->body;
+        }
+
+        if (is_object($this->body) === true && method_exists($this->body, 'rows') === true) {
+            return iterator_to_array($this->body->rows());
+        }
+
         return [$this->body];
     }
 

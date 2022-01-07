@@ -71,7 +71,6 @@ final class RiskWordManager implements RiskWordUseCase
             $language,
             $createdAt
         );
-
         $response = $this->bigQueryUseCase->getData($sqlModel);
 
         return RiskWordAdapter::getRiskCommentList($response);

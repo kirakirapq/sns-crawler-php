@@ -46,6 +46,9 @@ final class BigQueryManager implements BigQueryUseCase
     {
         $response = $this->bigqueryRepository->getData($sqlModel);
 
+        // var_dump($response->getBody());
+        // exit();
+
         if ($response->hasError() === true) {
             Log::error('BigQueryManager:getData', [$response->getBody()]);
 

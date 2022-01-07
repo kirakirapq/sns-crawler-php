@@ -26,11 +26,11 @@ class SubRedditRequestDataTest extends TestCase
         return [
             'id empty case' => [
                 'id' => '',
-                'expected' => 'https://www.reddit.com/r/.json',
+                'expected' => 'https://www.reddit.com/r//new.json',
             ],
             'id not empty case' => [
                 'id' => 'test',
-                'expected' => 'https://www.reddit.com/r/test.json',
+                'expected' => 'https://www.reddit.com/r/test/new.json',
             ],
         ];
     }

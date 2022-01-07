@@ -4,13 +4,8 @@ namespace App\Entities\BigQuery;
 
 final class LatestData
 {
-  private string $name;
-  private array $colmuns;
-
-  public function __construct($name, array $colmuns)
+  public function __construct(private string $name, private array $colmuns)
   {
-    $this->name = $name;
-    $this->colmuns = $colmuns;
   }
 
   public function getName(): string

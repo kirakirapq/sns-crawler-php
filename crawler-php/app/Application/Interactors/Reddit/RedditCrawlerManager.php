@@ -4,7 +4,6 @@ namespace App\Application\Interactors\Reddit;
 
 use App\Adapters\OuterApiResponseAdapter;
 use App\Adapters\TranslationDataAdapter;
-use App\Application\OutputData\InnerApiResponse\NotificationResponseModel;
 use App\Application\OutputData\OuterApiResponse\OuterApiResponse;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;
 use App\Application\UseCases\Csv\CsvUseCase;
@@ -13,6 +12,7 @@ use App\Application\UseCases\RiskWord\RiskWordUseCase;
 use App\Application\UseCases\Translation\TranslationUseCase;
 use App\Application\UseCases\Reddit\RedditApiUseCase;
 use App\Application\UseCases\Reddit\RedditCrawlerUseCase;
+use App\Entities\Notification\NotificationResponseModel;
 use App\Entities\BigQuery\Colmun;
 use App\Entities\RiskWord\RiskCommentList;
 use App\Entities\Translation\TranslationDataList;

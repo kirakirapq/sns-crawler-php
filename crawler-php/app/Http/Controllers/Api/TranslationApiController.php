@@ -36,23 +36,24 @@ class TranslationApiController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function translation(Request $request)
-    {
-        try {
-            Log::info('TranslationApiController::translation', ['job start']);
-            $requestData = TranslationDataAdapter::getTranslationRequestData($request->all());
+     public function translation(Request $request)
+     {
+         try {
+             Log::info('TranslationApiController::translation', ['job start']);
+             $version = 'V3';
+             $requestData = TranslationDataAdapter::getTranslationRequestData($request->all(), $version);
 
-            $response = $this->translationInvoker->invokeTranslation($requestData);
-            Log::info('TranslationApiController::translation', ['job complete']);
-        } catch (OuterErrorException $e) {
-            $response = OuterApiResponseAdapter::getFromOuterErrorException($e);
-        }
+             $response = $this->translationInvoker->invokeTranslation($requestData);
+             Log::info('TranslationApiController::translation', ['job complete']);
+         } catch (OuterErrorException $e) {
+             $response = OuterApiResponseAdapter::getFromOuterErrorException($e);
+         }
 
-        return response()->json(
-            $response->getMessage(),
-            $response->getStatusCode(),
-            ['Content-Type' => 'application/json'],
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK
-        );
-    }
+         return response()->json(
+             $response->getMessage(),
+             $response->getStatusCode(),
+             ['Content-Type' => 'application/json'],
+             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_NUMERIC_CHECK
+         );
+     }
 }

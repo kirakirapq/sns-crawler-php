@@ -1,6 +1,6 @@
 <?php
 
-namespace Unit\Adapters;
+namespace Unit\Application\Interactors\Csv;
 
 use App\Application\Interactors\Csv\CsvManager;
 use App\Application\OutputData\InnerApiResponse\CsvResponse;
@@ -59,6 +59,10 @@ class CsvManagerTest extends TestCase
      */
     public function deleteFile(bool $hasError, string $getBody, string $expected): void
     {
+        if ($hasError === true) {
+            Log::shouldReceive('error')->once();
+        }
+
         $csvResponse = Mockery::mock(CsvResponse::class)
             ->shouldReceive(
                 [

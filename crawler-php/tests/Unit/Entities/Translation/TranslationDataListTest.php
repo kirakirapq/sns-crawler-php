@@ -3,47 +3,185 @@
 namespace Unit\Entities\Translation;
 
 use App\Entities\Translation\TranslationDataList;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
-use \Mockery;
 
+/**
+ * TranslationDataListTest
+ * @runTestsInSeparateProcesses
+ */
 class TranslationDataListTest extends TestCase
 {
 
     /**
      * translationData
      * @test
+     * @dataProvider getInstanceProvider
+     * @preserveGlobalState disabled
      *
      * @return void
      */
-    public function translationData(): void
+    public function translationData(bool $instanceIsNull, ?Collection $apiDataFirst, Collection $apiData, Collection $translationData, Collection $expected): void
     {
-        $api = $trans = [];
-        for ($i = 0; $i < 10; $i++) {
-            $api[$i] = [
-                'id' => $i + 1,
-                'text' => sprintf('text_%s', $i + 1),
-            ];
-            $trans[$i] =
-                Mockery::mock(StdClass::class)
-                ->shouldReceive([
-                    'getBodyAsArray' => [
-                        'id' => $i * 1,
-                        'text' => sprintf('text_%s', $i * 1),
-                    ],
-                ])
-                ->getMock();
-            $expected[$i] = [
-                'id' => $i + 1,
-                'text' => sprintf('text_%s', $i + 1),
-                'translated' => sprintf('text_%s', $i * 1),
-            ];
+        if ($instanceIsNull === true) {
+            $actual = TranslationDataList::getInstance($apiData, $translationData);
+        } else {
+            TranslationDataList::getInstance($apiDataFirst, collect([]));
+            $actual = TranslationDataList::getInstance($apiData, $translationData);
         }
 
-        $apiCollection = collect($api);
-        $translated = collect($trans);
+        $this->assertEquals($expected, $actual->translationData());
+    }
 
-        $entity = new TranslationDataList($apiCollection, $translated);
+    public function getInstanceProvider(): array
+    {
+        return [
+            'instance is null case' => [
+                'instanceIsNull' => true,
+                'apiDataFirst' => null,
+                'apiData' => collect([
+                    [
+                        'id' => 'xxx-1',
+                        'text' => 'text-1'
+                    ],
+                    [
+                        'id' => 'xxx-2',
+                        'text' => 'text-2'
+                    ]
+                ]),
+                'translationData' => collect([
+                    [
+                        'id' => 'xxx-1',
+                        'text' => 'translated-1'
+                    ],
+                    [
+                        'id' => 'xxx-2',
+                        'text' => 'translated-2'
+                    ]
+                ]),
+                'expected' => collect(
+                    [
+                        [
+                            'id' => 'xxx-1',
+                            'text' => 'text-1',
+                            'translated' => 'translated-1'
+                        ],
+                        [
+                            'id' => 'xxx-2',
+                            'text' => 'text-2',
+                            'translated' => 'translated-2'
+                        ]
+                    ]
+                )
+            ],
+            'instance is null and include not exists key case' => [
+                'instanceIsNull' => true,
+                'apiDataFirst' => null,
+                'apiData' => collect([
+                    [
+                        'id' => 'xxx-1',
+                        'text' => 'text-1'
+                    ],
+                    [
+                        'id' => 'xxx-2',
+                        'text' => 'text-2'
+                    ]
+                ]),
+                'translationData' => collect([
+                    [
+                        'id' => 'xxx-1',
+                        'text' => 'translated-1'
+                    ],
+                    [
+                        'id' => 'xxx-2',
+                        'text' => 'translated-2'
+                    ],
+                    [
+                        'id' => 'xxx-2',
+                        'text' => 'translated-2'
+                    ]
+                ]),
+                'expected' => collect(
+                    [
+                        [
+                            'id' => 'xxx-1',
+                            'text' => 'text-1',
+                            'translated' => 'translated-1'
+                        ],
+                        [
+                            'id' => 'xxx-2',
+                            'text' => 'text-2',
+                            'translated' => 'translated-2'
+                        ]
+                    ]
+                )
+            ],
 
-        $this->assertEquals(collect($expected), $entity->translationData());
+            'instance is not null and include not exists key case' => [
+                'instanceIsNull' => false,
+                'apiDataFirst' => collect(
+                    [
+                        [
+                            'id' => 'xxx-1',
+                            'text' => 'text-1',
+                            'translated' => 'translated-1'
+                        ],
+                        [
+                            'id' => 'xxx-2',
+                            'text' => 'text-2',
+                            'translated' => 'translated-2'
+                        ]
+                    ]
+                ),
+                'apiData' => collect([
+                    [
+                        'id' => 'xxx-3',
+                        'text' => 'text-3'
+                    ],
+                    [
+                        'id' => 'xxx-4',
+                        'text' => 'text-4'
+                    ]
+                ]),
+                'translationData' => collect([
+                    [
+                        'id' => 'xxx-3',
+                        'text' => 'translated-3'
+                    ],
+                    [
+                        'id' => 'xxx-4',
+                        'text' => 'translated-4'
+                    ],
+                    [
+                        'id' => 'xxx-5',
+                        'text' => 'translated-5'
+                    ]
+                ]),
+                'expected' => collect(
+                    [
+                        [
+                            'id' => 'xxx-1',
+                            'text' => 'text-1',
+                            'translated' => 'translated-1'
+                        ],
+                        [
+                            'id' => 'xxx-2',
+                            'text' => 'text-2',
+                            'translated' => 'translated-2'
+                        ],
+                        [
+                            'id' => 'xxx-3',
+                            'text' => 'text-3',
+                            'translated' => 'translated-3'
+                        ],
+                        [
+                            'id' => 'xxx-4',
+                            'text' => 'text-4',
+                            'translated' => 'translated-4'
+                        ]
+                    ]
+                )
+            ]
+        ];
     }
 }

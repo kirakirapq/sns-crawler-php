@@ -3,7 +3,6 @@
 namespace App\Application\Interactors\Twitter;
 
 use App\Adapters\OuterApiResponseAdapter;
-use App\Adapters\TranslationDataAdapter;
 use App\Application\OutputData\InnerApiResponse\NotificationResponseModel;
 use App\Application\OutputData\OuterApiResponse\OuterApiResponse;
 use App\Application\UseCases\BigQuery\BigQueryUseCase;

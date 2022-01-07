@@ -3,14 +3,13 @@
 namespace Unit\Application\InputData;
 
 use App\Application\InputData\RiskCommentListSql;
+use App\Entities\BigQuery\Colmun;
 use Tests\TestCase;
 
 class RiskCommentListSqlTest extends TestCase
 {
     /**
      * getSql
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
      * @test
      * @dataProvider getSqlDataProvider
      *
@@ -44,12 +43,12 @@ class RiskCommentListSqlTest extends TestCase
         if ($expected['created_at'] === true) {
             $this->assertTrue(0 < strpos(
                 $actual,
-                'FORMAT_TIMESTAMP(\'%Y-%m-%d %H:%M:%S\',created_at,\'Asia/Tokyo\') > ?'
+                'FORMAT_TIMESTAMP("%%Y-%%m-%%d %%H:%%M:%%S", created_at,"Asia/Tokyo") > ?'
             ));
         } else {
             $this->assertFalse(strpos(
                 $actual,
-                'FORMAT_TIMESTAMP(\'%Y-%m-%d %H:%M:%S\',created_at,\'Asia/Tokyo\') > ?'
+                'FORMAT_TIMESTAMP("%%Y-%%m-%%d %%H:%%M:%%S", created_at,"Asia/Tokyo") > ?'
             ));
         }
 
@@ -75,7 +74,7 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => 'kms',
                 'language' => 'en',
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => [
                     'table' => true,
                     'dt' => true,
@@ -90,7 +89,7 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => null,
                 'language' => 'en',
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => [
                     'table' => true,
                     'dt' => true,
@@ -105,7 +104,7 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => 'kms',
                 'language' => null,
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => [
                     'table' => true,
                     'dt' => true,
@@ -149,8 +148,6 @@ class RiskCommentListSqlTest extends TestCase
 
     /**
      * getParameters
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
      * @test
      * @dataProvider getParametersDataProvider
      *
@@ -179,10 +176,10 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => 'kms',
                 'language' => 'en',
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => [
                     '2021-10-10',
-                    '2021-10-10 09:00:00',
+                    '2021-10-10 00:00:00',
                     'kms',
                     'en'
                 ],
@@ -193,10 +190,10 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => null,
                 'language' => 'en',
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => [
                     '2021-10-10',
-                    '2021-10-10 09:00:00',
+                    '2021-10-10 00:00:00',
                     'en'
                 ],
             ],
@@ -206,10 +203,10 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => 'kms',
                 'language' => null,
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => [
                     '2021-10-10',
-                    '2021-10-10 09:00:00',
+                    '2021-10-10 00:00:00',
                     'kms',
                 ],
             ],
@@ -267,7 +264,7 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => 'kms',
                 'language' => 'en',
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => true,
             ],
             'title null case' => [
@@ -276,7 +273,7 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => null,
                 'language' => 'en',
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => true,
             ],
             'language null case' => [
@@ -285,7 +282,7 @@ class RiskCommentListSqlTest extends TestCase
                 'table' => 'tbl',
                 'title' => 'kms',
                 'language' => null,
-                'createdAt' => '2021-10-10 00:00:00',
+                'createdAt' => new Colmun('dt_time', '2021-10-10 00:00:00'),
                 'expected' => true,
             ],
             'created_at null case' => [
